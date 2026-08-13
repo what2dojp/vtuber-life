@@ -28,7 +28,7 @@ const CHAT_COLORS = [
   "#a5b4fc",
 ];
 
-const CHAT_USERS = [
+const USER_NAMES = [
   "待機古參",
   "箱推A",
   "clip_職人",
@@ -41,41 +41,85 @@ const CHAT_USERS = [
   "月月箱推",
   "不要香菜教",
   "SAN監視員",
+  "綠界小金剛",
+  "月月單推人",
+  "路過黑粉",
+  "箱推大客",
+  "全勤觀眾",
+  "無課金戰士",
+  "SC大暴戶",
+  "DD三千",
+  "烤肉 Man",
+  "鍵盤教練",
+  "貼貼狂魔",
+  "吟遊詩人",
 ];
 
 const MEME_COMMENTS = {
-  safe: [
-    "初見安安",
-    "今天也是和平的一天",
-    "辛苦了！",
+  steady: [
+    "初見安安！",
+    "今天也是和平的一天呢",
+    "推推！",
     "好聽！",
-    "推推",
-    "卡",
+    "卡位",
+    "辛苦了！",
+    "今天主播也卡哇伊",
+    "貼貼！",
+    "聽著聽著就睡著了（讚賞意）",
+    "金牌主播穩的",
+    "這是可以免費看的嗎？",
+    "默默點贊",
   ],
   standard: [
-    "草草草",
+    "草草草草草",
     "7777777",
-    "這台很有梗",
-    "主播皮掉了啦",
-    "888888",
-    "這也是初配信的一環嗎",
+    "8888888",
+    "笑死ｗ",
+    "主播你皮掉了啦！",
+    "這也是初配信的一環嗎？",
+    "懂喔！",
+    "前方高能！",
+    "我推的 VTuber 今天也在發光",
+    "真不愧是影之強者",
+    "這波操作滿分",
+    "快看那個迷因",
+    "給開司一碗熱湯",
+    "恭喜萬定衝刺！",
+    "月月讚讚！",
   ],
-  gamble: [
-    "要爆了要爆了",
-    "心臟受不了",
-    "這真的可以播嗎",
+  gambling: [
+    "???",
+    "要爆了要爆了！",
+    "心臟受不了！",
+    "這真的可以播嗎？？",
+    "大團圓預備！",
+    "全押了兄弟們！",
+    "領域展開！",
+    "這是我最後的波紋了！",
+    "無敵的吧！",
+    "隊友在戳！",
+    "倒在血泊中",
     "抖內 NT$ 1500：壓上了！",
-    "大團圓預備",
-    "全押了兄弟們",
+    "抖內 NT$ 3000：請收下我的腎",
+    "神台預定！",
+    "歷史會記住這一天",
   ],
   meme: [
-    "???",
-    "我到底看了什麼",
+    "我到底看了什麼ｗｗｗ",
     "這台太抽象了",
     "阿嬤都播得比你好",
-    "抖內 NT$ 75：安安",
-    "救命啊ｗｗｗ",
     "前世是大牌？",
+    "請教我貼貼！",
+    "抖內 NT$ 75：安安可以叫我名字嗎",
+    "救命啊ｗｗｗ",
+    "破防了破防了",
+    "這不是我認識的 V",
+    "畫面太美不敢看",
+    "笑到肚子痛",
+    "聽說這裡有怪人",
+    "這是人類能做出來的節目嗎",
+    "全網大解析時代",
+    "草（日文）",
   ],
 } as const;
 
@@ -90,53 +134,15 @@ const IDLE_CHAT = [
   "ここホロライブ？",
   "訂了",
   "草草",
-  ...MEME_COMMENTS.safe,
+  ...MEME_COMMENTS.steady,
   ...MEME_COMMENTS.standard,
 ];
 
 const CHAT_BY_MOOD: Record<string, string[]> = {
-  safe: [
-    "穩",
-    "好好休息",
-    "專業",
-    "這才叫個人勢",
-    "晚安",
-    "今天也辛苦了",
-    "不開太拚的比較好",
-    ...MEME_COMMENTS.safe,
-  ],
-  standard: [
-    "草",
-    "名場面",
-    "訂了",
-    "這集可以剪",
-    "待機室見",
-    "www",
-    "經典",
-    ...MEME_COMMENTS.standard,
-  ],
-  gamble: [
-    "草草草",
-    "這是在播什麼",
-    "中之人還好嗎",
-    "再一隻就過了",
-    "SAN 值看起來比 HP 低",
-    "這不是直播這是社會事件",
-    "神回預定",
-    "You Died",
-    ...MEME_COMMENTS.gamble,
-  ],
-  meme: [
-    "草草草",
-    "當代藝術",
-    "這是在播什麼",
-    "抽象",
-    "www 這就是個人勢",
-    "ここホロライブ？",
-    "嘴巴 independently 營業",
-    "不要香菜www",
-    ...MEME_COMMENTS.meme,
-  ],
+  safe: [...MEME_COMMENTS.steady],
+  standard: [...MEME_COMMENTS.standard],
+  gamble: [...MEME_COMMENTS.gambling],
+  meme: [...MEME_COMMENTS.meme],
   promo: [
     "恭喜萬定！",
     "月月加油",
@@ -166,7 +172,7 @@ function createChatLine(
   chatSeq += 1;
   return {
     id: chatSeq,
-    user: options?.user ?? CHAT_USERS[chatSeq % CHAT_USERS.length],
+    user: options?.user ?? USER_NAMES[chatSeq % USER_NAMES.length],
     text,
     color: CHAT_COLORS[chatSeq % CHAT_COLORS.length],
     badge: options?.badge,
@@ -211,18 +217,18 @@ export function buildChatBurst(
       createChatLine("恭喜萬定！", {
         badge: "SUB",
         highlight: true,
-        user: "箱推A",
+        user: "箱推大客",
       }),
     );
   }
   if (label.includes("豪賭")) {
     extra.push(
-      createChatLine("草草草", { badge: "VIP", user: "待機古參" }),
-      createChatLine("這是在播什麼", { user: "SAN監視員" }),
+      createChatLine("全押了兄弟們！", { badge: "VIP", user: "綠界小金剛" }),
+      createChatLine("這真的可以播嗎？？", { user: "鍵盤教練" }),
     );
   }
   if (label.includes("迷因")) {
-    extra.push(createChatLine("當代藝術＋1", { user: "clip_職人" }));
+    extra.push(createChatLine("這台太抽象了", { user: "烤肉 Man" }));
   }
 
   const count = 6 + Math.floor(Math.random() * 4);
@@ -234,11 +240,11 @@ export function buildChatBurst(
 
 function seedIdleChat(): ChatLine[] {
   return [
-    createChatLine("初配信出道！", { badge: "MOD", user: "待機古參" }),
-    createChatLine("安安", { user: "箱推A" }),
-    createChatLine("稍等一下喔"),
-    createChatLine("麥克風有沒有 OK"),
-    createChatLine("草"),
+    createChatLine("初配信出道！", { badge: "MOD", user: "全勤觀眾" }),
+    createChatLine("初見安安！", { user: "月月單推人" }),
+    createChatLine("卡位", { user: "貼貼狂魔" }),
+    createChatLine("這是可以免費看的嗎？", { user: "無課金戰士" }),
+    createChatLine("推推！", { user: "箱推A" }),
   ];
 }
 
