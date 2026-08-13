@@ -56,6 +56,62 @@ const DEFAULT_NAME = "星野可樂";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
+
+type TalentId = "singer" | "meme" | "spark";
+
+const TALENTS: Record<
+  TalentId,
+  {
+    id: TalentId;
+    label: string;
+    description: string;
+    fans: number;
+    san: number;
+    talk: number;
+    singing: number;
+    tech: number;
+    drama: number;
+    log: string;
+  }
+> = {
+  singer: {
+    id: "singer",
+    label: "🎤 歌姬轉生",
+    description: "歌力 +25、技術 +5、粉絲 +300。副歌是你的起跑槍。",
+    fans: 300,
+    san: 0,
+    talk: 0,
+    singing: 25,
+    tech: 5,
+    drama: 0,
+    log: "天賦【歌姬轉生】覺醒：歌力大幅提升，歌回成為主線。",
+  },
+  meme: {
+    id: "meme",
+    label: "🤡 迷因怪人",
+    description: "雜談 +18、炎上 +8、粉絲 +200。迷因選項成功率 +20%。",
+    fans: 200,
+    san: 0,
+    talk: 18,
+    singing: 0,
+    tech: 0,
+    drama: 8,
+    log: "天賦【迷因怪人】覺醒：抽象體質啟動，迷因選項更容易成功。",
+  },
+  spark: {
+    id: "spark",
+    label: "🌸 可樂月月星火社研習生",
+    description: "粉絲 +500、SAN +10、雜談 +10。開局即與月月箱推結緣。",
+    fans: 500,
+    san: 10,
+    talk: 10,
+    singing: 0,
+    tech: 0,
+    drama: 0,
+    log: "天賦【可樂月月星火社研習生】：你帶著四周年應援入場，箱推已經在待機室了。",
+  },
+};
+
 const INITIAL_STATS = {
   name: DEFAULT_NAME,
   seed: DEFAULT_SEED,
@@ -282,7 +338,7 @@ function getEffectiveChance(
   let chance = option.chance;
 
   if (
-    careerBuffs.includes("reincarnation") &&
+    (careerBuffs.includes("reincarnation") || careerBuffs.includes("talent_meme")) &&
     (option.type === "meme" || option.label.includes("迷因"))
   ) {
     chance = Math.min(100, chance + 20);
@@ -355,6 +411,24 @@ function formatFans(fans: number): string {
 function formatDelta(value: number): string {
   if (value > 0) return `+${value}`;
   return `${value}`;
+}
+
+function buildShareText(name: string, title: string, seed: string): string {
+  const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
+  return [
+    `我在《VTuber 人生模擬器》走完一趟配信人生，獲得同人頭銜「${title}」！`,
+    `${name} 在此祝賀 @colamoonie 四周年萬定衝刺，一起衝 10,000 訂閱！`,
+    url,
+    "#Colamoon4th #VTuber人生模擬器",
+  ].join("\n");
+}
+
+function buildXShareUrl(name: string, title: string, seed: string): string {
+  return `https://x.com/intent/tweet?text=${encodeURIComponent(buildShareText(name, title, seed))}`;
+}
+
+function buildThreadsShareUrl(name: string, title: string, seed: string): string {
+  return `https://www.threads.net/intent/post?text=${encodeURIComponent(buildShareText(name, title, seed))}`;
 }
 
 function sanBarClass(san: number): { fill: string; label: string; blink: boolean } {
@@ -434,7 +508,7 @@ export default function Home() {
     );
   }, [talk, singing, tech]);
 
-  function handleDebut() {
+  function handleDebut(talent: TalentId | null) {
     const nextName = nameInput.trim() || DEFAULT_NAME;
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
@@ -451,6 +525,33 @@ export default function Home() {
     careerSelecting.current = false;
     setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
     setResolveState(null);
+
+    if (talent) {
+      const bonus = TALENTS[talent];
+      const stats = useGameStore.getState();
+      applyEventResult(
+        {
+          fans: stats.fans + bonus.fans,
+          san: stats.san + bonus.san,
+          talk: stats.talk + bonus.talk,
+          singing: stats.singing + bonus.singing,
+          tech: stats.tech + bonus.tech,
+          drama: stats.drama + bonus.drama,
+        },
+        `【第 1 個月】${bonus.log}`,
+      );
+      setPeakFans(stats.fans + bonus.fans);
+      setPeakDrama(stats.drama + bonus.drama);
+
+      if (talent === "meme") {
+        setCareerBuffs(["talent_meme"]);
+      }
+      if (talent === "spark") {
+        setHasCollab(true);
+        setHasColamoonCollab(true);
+        setCareerBuffs(["talent_spark"]);
+      }
+    }
   }
 
   function handleOption(option: EventOption) {
@@ -756,8 +857,10 @@ function CreateScreen({
   onNameChange: (value: string) => void;
   onSeedChange: (value: string) => void;
   onRandomSeed: () => void;
-  onDebut: () => void;
+  onDebut: (talent: TalentId | null) => void;
 }) {
+  const [talent, setTalent] = useState<TalentId | null>(null);
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
       <div className="mx-auto w-full max-w-2xl rounded-3xl border border-purple-300/20 bg-[#251f35]/80 p-8 shadow-[0_0_48px_rgba(244,114,182,0.22)] backdrop-blur">
@@ -829,14 +932,54 @@ function CreateScreen({
           </div>
         </div>
 
+        <div className="mt-6">
+          <p className="text-xs font-semibold tracking-wider text-purple-300/70">
+            初始天賦（可選）
+          </p>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(Object.values(TALENTS) as (typeof TALENTS)[TalentId][]).map(
+              (item) => {
+                const active = talent === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      setTalent((current) =>
+                        current === item.id ? null : item.id,
+                      )
+                    }
+                    className={`rounded-2xl border p-3 text-left transition ${
+                      active
+                        ? "border-pink-400/60 bg-pink-500/15 shadow-[0_0_16px_rgba(236,72,153,0.25)]"
+                        : "border-purple-300/20 bg-[#1a1625] hover:border-pink-400/40"
+                    }`}
+                  >
+                    <p className="text-sm font-black text-purple-100">
+                      {item.label}
+                    </p>
+                    <p className="mt-1 text-[11px] leading-5 text-purple-300/70">
+                      {item.description}
+                    </p>
+                  </button>
+                );
+              },
+            )}
+          </div>
+        </div>
+
         <button
           type="button"
-          onClick={onDebut}
+          onClick={() => onDebut(talent)}
           className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-4 text-lg font-black tracking-wide text-white shadow-[0_0_28px_rgba(236,72,153,0.4)] transition hover:brightness-110"
         >
           <Sparkles className="h-5 w-5" />
           初配信出道！
         </button>
+      </div>
+
+      <div className="mx-auto mt-8 w-full max-w-3xl">
+        <ColamoonHomeBanner />
       </div>
     </main>
   );
@@ -1300,6 +1443,31 @@ function GraduationScreen({
           重新轉生
         </button>
       </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => {
+            window.open(buildXShareUrl(name, title, seed), "_blank", "noopener,noreferrer");
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-800"
+        >
+          一鍵分享至 X (Twitter)
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            window.open(
+              buildThreadsShareUrl(name, title, seed),
+              "_blank",
+              "noopener,noreferrer",
+            );
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-4 py-3 text-sm font-bold text-white transition hover:brightness-110"
+        >
+          一鍵分享至 Threads
+        </button>
+      </div>
       </div>
     </main>
   );
@@ -1368,6 +1536,29 @@ function CareerChoiceModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function ColamoonHomeBanner() {
+  return (
+    <section className="overflow-hidden rounded-3xl border border-purple-400/30 bg-gradient-to-r from-purple-900/70 via-fuchsia-900/50 to-amber-700/40 p-6 shadow-[0_0_36px_rgba(244,114,182,0.22)]">
+      <p className="text-center text-base font-black tracking-wide text-amber-100 sm:text-lg">
+        ✦ 台灣 VTuber 可樂月月 4 週年紀念中！衝刺 10,000 訂閱 ✦
+      </p>
+      <p className="mt-2 text-center text-sm leading-6 text-purple-100/85">
+        四周年萬定倒數中。看完創角，也來給先輩點一顆訂閱吧！
+      </p>
+      <div className="mt-4 flex justify-center">
+        <a
+          href={COLAMOON_YOUTUBE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-2.5 text-sm font-black text-white shadow-[0_0_20px_rgba(236,72,153,0.45)] transition hover:brightness-110"
+        >
+          👉 點我前往 YouTube 訂閱可樂月月
+        </a>
+      </div>
+    </section>
   );
 }
 

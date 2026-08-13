@@ -307,6 +307,14 @@ export default function LiveChat({
           LIVE
         </span>
       </div>
+      <a
+        href="https://www.youtube.com/@colamoonie"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 border-b border-amber-300/40 bg-gradient-to-r from-amber-500/20 via-yellow-400/15 to-pink-500/20 px-3 py-2 text-[11px] font-bold leading-5 text-amber-200 hover:text-amber-100"
+      >
+        📌【系統公告】可樂月月 4 週年萬定衝刺中！快來點擊支持！
+      </a>
       <div
         ref={scrollerRef}
         className="min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-2 scrollbar-thin"
