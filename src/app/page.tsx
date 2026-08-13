@@ -31,7 +31,8 @@ import {
   type EventSuccess,
   type GameEvent,
 } from "@/data/events";
-import { checkChance, shuffleArray } from "@/lib/prng";
+import { checkChance, getRandomInt, shuffleArray } from "@/lib/prng";
+import { getVTuberTitle } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
 type EventOutcome = EventSuccess | EventFailure;
@@ -233,6 +234,68 @@ function toAbsoluteChanges(
   };
 }
 
+function correspondingSkill(
+  option: EventOption,
+  stats: Pick<PlayerStats, "talk" | "singing" | "tech">,
+): number {
+  const talkGain = option.success.talk ?? 0;
+  const singingGain = option.success.singing ?? 0;
+  const techGain = option.success.tech ?? 0;
+
+  if (singingGain > talkGain && singingGain >= techGain) {
+    return stats.singing;
+  }
+  if (techGain > talkGain && techGain > singingGain) {
+    return stats.tech;
+  }
+  if (talkGain > 0) {
+    return stats.talk;
+  }
+
+  if (option.type === "steady" || option.type === "meme") {
+    return stats.talk;
+  }
+
+  return Math.max(stats.talk, stats.singing, stats.tech);
+}
+
+function hasHighSkillBonus(
+  option: EventOption,
+  stats: Pick<PlayerStats, "talk" | "singing" | "tech">,
+): boolean {
+  return correspondingSkill(option, stats) > 50;
+}
+
+function getEffectiveChance(
+  option: EventOption,
+  stats: Pick<PlayerStats, "talk" | "singing" | "tech">,
+  careerBuffs: string[],
+): number {
+  let chance = option.chance;
+
+  if (
+    careerBuffs.includes("reincarnation") &&
+    (option.type === "meme" || option.label.includes("迷因"))
+  ) {
+    chance = Math.min(100, chance + 20);
+  }
+
+  if (hasHighSkillBonus(option, stats)) {
+    chance = Math.min(100, chance + 15);
+  }
+
+  return chance;
+}
+
+function skillPassiveFans(talk: number, singing: number, tech: number): number {
+  const chunks = Math.floor((talk + singing + tech) / 10);
+  if (chunks <= 0) {
+    return 0;
+  }
+
+  return chunks * getRandomInt(100, 200);
+}
+
 function formatFans(fans: number): string {
   return fans.toLocaleString("zh-TW");
 }
@@ -240,56 +303,6 @@ function formatFans(fans: number): string {
 function formatDelta(value: number): string {
   if (value > 0) return `+${value}`;
   return `${value}`;
-}
-
-function getFandomTitle(peakFans: number, peakDrama: number, san: number): string {
-  if (peakFans >= 1_000_000) return "百萬級箱推霸主";
-  if (peakDrama >= 80) return "炎上系極限生存者";
-  if (san <= 0) return "SAN 歸零現場直播本尊";
-  if (peakFans < 500) return "零人凸待慘劇主角";
-  if (peakFans < 1_000 && peakDrama >= 40) return "地下勢解析常客";
-  if (san <= 25 && peakDrama >= 50) return "精神值比同接低的傳奇";
-  if (peakFans >= 100_000) return "切片區認證の箱推本體";
-  if (peakFans >= 10_000) return "萬定祈願成就者";
-  if (san >= 80 && peakDrama < 20) return "穩健營業の優等生";
-  if (peakDrama >= 50) return "大解析時代目擊證人";
-  return "待機室認證の名場面職人";
-}
-
-function getCareerTitle(fans: number, drama: number): string {
-  if (fans >= 1_000_000 && drama >= 70) return "炎上也能百萬的箱推魔王";
-  if (fans >= 1_000_000) return "百萬級箱推霸主";
-  if (fans >= 500_000) return "傳說級個人勢";
-  if (drama >= 80) return "炎上極限生存者";
-  if (fans >= 100_000 && drama >= 50) return "話題製造機";
-  if (fans >= 100_000) return "穩健運營的實力派";
-  if (fans >= 10_000 && drama >= 40) return "小火慢燉的解析常客";
-  if (fans >= 10_000) return "萬粉達成の個人勢";
-  if (fans < 500) return "慘澹畢業個人勢";
-  if (fans < 1_000) return "地下勢傳說（自己的傳說）";
-  if (drama >= 60) return "炎上耐性測驗通過者";
-  return "努力過的三年 VTuber";
-}
-
-function getGraduationQuote(
-  name: string,
-  fans: number,
-  drama: number,
-  san: number,
-): string {
-  if (san <= 0) {
-    return `${name} 的 SAN 值歸零了。不是畢業，是被彈幕讀完。下次轉生，記得先關麥克風再喊不要香菜。`;
-  }
-  if (fans >= 1_000_000) {
-    return `從個人勢走到百萬訂閱。${name} 把「稍等一下喔」做成了品牌。箱推永遠在待機室等你。`;
-  }
-  if (drama >= 80) {
-    return `解析文比 VOD 還長，${name} 還是撐到了畢業。炎上是修羅場，也是名場面。`;
-  }
-  if (fans < 1_000) {
-    return `同接不一定會來，但 ${name} 有來。這三年很短，待機室的 BGM 還在。零人凸待也可以是神回。`;
-  }
-  return `謝謝每一則 Super Chat 與每一次「草」。${name} 的皮套會褪色，切片還在。下輩子還當 V 的話，先確認 OBS 有沒有真的停。`;
 }
 
 function sanBarClass(san: number): { fill: string; label: string; blink: boolean } {
@@ -334,6 +347,8 @@ export default function Home() {
   );
   const [careerBuffs, setCareerBuffs] = useState<string[]>([]);
   const [danmakuTrigger, setDanmakuTrigger] = useState<number | null>(null);
+  const [hasCollab, setHasCollab] = useState(false);
+  const [hasColamoonCollab, setHasColamoonCollab] = useState(false);
   const careerSelecting = useRef(false);
   const eventDeckRef = useRef<GameEvent[]>([]);
   const eventCursorRef = useRef(0);
@@ -379,6 +394,8 @@ export default function Home() {
     setDanmakuTrigger(null);
     setCareerPhase(null);
     setCareerBuffs([]);
+    setHasCollab(false);
+    setHasColamoonCollab(false);
     careerSelecting.current = false;
     setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
     setResolveState(null);
@@ -389,11 +406,8 @@ export default function Home() {
       return;
     }
 
-    let chance = option.chance;
-    if (careerBuffs.includes("reincarnation") && option.label.includes("迷因")) {
-      chance = Math.min(100, chance + 20);
-    }
-
+    const stats = useGameStore.getState();
+    const chance = getEffectiveChance(option, stats, careerBuffs);
     const success = checkChance(chance);
     const outcome = success ? option.success : option.failure;
     const deltas = applyCareerBuffsToDeltas(
@@ -402,12 +416,22 @@ export default function Home() {
       success,
       careerBuffs,
     );
-    const stats = useGameStore.getState();
+
+    if (success && hasHighSkillBonus(option, stats) && deltas.fans > 0) {
+      deltas.fans = Math.round(deltas.fans * 1.3);
+    }
 
     applyEventResult(
       toAbsoluteChanges(stats, deltas),
       `【第 ${stats.month} 個月】${outcome.log}`,
     );
+
+    if (isCollabEvent(currentEvent)) {
+      setHasCollab(true);
+    }
+    if (currentEvent?.id === "colamoon_collab") {
+      setHasColamoonCollab(true);
+    }
 
     const nextFans = Math.max(0, stats.fans + deltas.fans);
     setChatBurst({
@@ -426,7 +450,21 @@ export default function Home() {
     });
   }
 
+  function applyMonthlyPassiveIncome() {
+    const state = useGameStore.getState();
+    const bonus = skillPassiveFans(state.talk, state.singing, state.tech);
+    if (bonus <= 0) {
+      return;
+    }
+
+    applyEventResult(
+      { fans: state.fans + bonus },
+      `【第 ${state.month} 個月】能力值被動收益：Talk+Sing+Tech 合計 ${state.talk + state.singing + state.tech}，額外 +${bonus} 粉絲。`,
+    );
+  }
+
   function handleNextMonth() {
+    applyMonthlyPassiveIncome();
     nextMonth();
     setResolveState(null);
 
@@ -473,12 +511,16 @@ export default function Home() {
     setCareerBuffs((current) =>
       current.includes(option.id) ? current : [...current, option.id],
     );
+    if (option.id === "agency_indie_group") {
+      setHasCollab(true);
+    }
     setCareerPhase(null);
     setChatBurst({
       token: Date.now(),
       lines: buildChatBurst(option.tag, true, stats.fans + deltas.fans),
     });
 
+    applyMonthlyPassiveIncome();
     nextMonth();
     const after = useGameStore.getState();
     careerSelecting.current = false;
@@ -500,6 +542,8 @@ export default function Home() {
     setDanmakuTrigger(null);
     setCareerPhase(null);
     setCareerBuffs([]);
+    setHasCollab(false);
+    setHasColamoonCollab(false);
     careerSelecting.current = false;
     eventDeckRef.current = [];
     eventCursorRef.current = 0;
@@ -561,9 +605,17 @@ export default function Home() {
           fans={fans}
           drama={drama}
           san={san}
+          talk={talk}
+          singing={singing}
+          tech={tech}
           peakFans={peakFans}
           peakDrama={peakDrama}
           careerMonths={careerMonths}
+          hasCollab={hasCollab}
+          hasColamoonCollab={hasColamoonCollab}
+          isColaMoonPartner={
+            hasColamoonCollab || careerBuffs.includes("agency_indie_group")
+          }
           topSkill={topSkill}
           downloading={downloading}
           copied={copied}
@@ -584,6 +636,7 @@ export default function Home() {
           singing={singing}
           tech={tech}
           drama={drama}
+          careerBuffs={careerBuffs}
           logs={logs}
           currentEvent={currentEvent}
           resolveState={resolveState}
@@ -711,6 +764,7 @@ function LiveScreen({
   singing,
   tech,
   drama,
+  careerBuffs,
   logs,
   currentEvent,
   resolveState,
@@ -732,6 +786,7 @@ function LiveScreen({
   singing: number;
   tech: number;
   drama: number;
+  careerBuffs: string[];
   logs: string[];
   currentEvent: GameEvent | null;
   resolveState: ResolveState | null;
@@ -855,6 +910,12 @@ function LiveScreen({
               <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
                 {currentEvent.options.map((option) => {
                   const parsed = splitBracketText(option.label);
+                  const chance = getEffectiveChance(
+                    option,
+                    { talk, singing, tech },
+                    careerBuffs,
+                  );
+                  const boosted = chance > option.chance;
                   return (
                     <button
                       key={option.label}
@@ -873,7 +934,8 @@ function LiveScreen({
                           {parsed.body || option.label}
                         </p>
                         <span className="shrink-0 font-mono text-xs font-semibold text-purple-300/80">
-                          {option.chance}%
+                          {chance}%
+                          {boosted ? " ↑" : ""}
                         </span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-purple-300/70">
@@ -962,9 +1024,15 @@ function GraduationScreen({
   fans,
   drama,
   san,
+  talk,
+  singing,
+  tech,
   peakFans,
   peakDrama,
   careerMonths,
+  hasCollab,
+  hasColamoonCollab,
+  isColaMoonPartner,
   topSkill,
   downloading,
   copied,
@@ -977,9 +1045,15 @@ function GraduationScreen({
   fans: number;
   drama: number;
   san: number;
+  talk: number;
+  singing: number;
+  tech: number;
   peakFans: number;
   peakDrama: number;
   careerMonths: number;
+  hasCollab: boolean;
+  hasColamoonCollab: boolean;
+  isColaMoonPartner: boolean;
   topSkill: { label: string; value: number };
   downloading: boolean;
   copied: boolean;
@@ -987,9 +1061,24 @@ function GraduationScreen({
   onCopySeed: () => void;
   onReincarnate: () => void;
 }) {
-  const title = getCareerTitle(fans, drama);
-  const fandomTitle = getFandomTitle(peakFans, peakDrama, san);
-  const quote = getGraduationQuote(name, fans, drama, san);
+  const result = getVTuberTitle({
+    name,
+    fans,
+    peakFans,
+    san,
+    drama,
+    peakDrama,
+    talk,
+    singing,
+    tech,
+    months: careerMonths,
+    hasCollab,
+    hasColamoonCollab,
+    isColaMoonPartner,
+  });
+  const title = result.title;
+  const fandomTitle = result.title;
+  const quote = result.quote;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
