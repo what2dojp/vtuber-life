@@ -5,6 +5,7 @@ import {
   Download,
   Flame,
   Heart,
+  MessageSquare,
   Radio,
   RotateCcw,
   Share2,
@@ -12,7 +13,7 @@ import {
   Trophy,
   Tv,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   RANDOM_EVENTS,
   type EventFailure,
@@ -45,6 +46,31 @@ const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const COLAMOON_PROMO_OPTION =
   "【大聲宣傳】祝賀月月 4 周年快樂！(點擊同時引導開啟頻道)";
+const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
+const CHAT_COLORS = [
+  "#ff7ab2",
+  "#9146ff",
+  "#00d2d3",
+  "#ffb31a",
+  "#57f287",
+  "#f97316",
+  "#38bdf8",
+  "#f472b6",
+];
+const CHAT_USERS = [
+  "待機古參",
+  "箱推A",
+  "clip_職人",
+  "翻譯組請假中",
+  "野うさぎ",
+  "同接73",
+  "PTT鄉民",
+  "巴哈仔",
+  "Holomem誤入",
+  "月月箱推",
+  "不要香菜教",
+  "SAN監視員",
+];
 const INITIAL_STATS = {
   name: DEFAULT_NAME,
   seed: DEFAULT_SEED,
@@ -58,6 +84,171 @@ const INITIAL_STATS = {
   isGraduated: false,
   logs: [] as string[],
 };
+
+interface ChatLine {
+  id: number;
+  user: string;
+  text: string;
+  color: string;
+  badge?: "MOD" | "SUB" | "VIP";
+  highlight?: boolean;
+}
+
+interface ChatBurst {
+  token: number;
+  lines: ChatLine[];
+}
+
+let chatSeq = 0;
+
+function createChatLine(
+  text: string,
+  options?: Pick<ChatLine, "badge" | "highlight" | "user">,
+): ChatLine {
+  chatSeq += 1;
+  return {
+    id: chatSeq,
+    user: options?.user ?? CHAT_USERS[chatSeq % CHAT_USERS.length],
+    text,
+    color: CHAT_COLORS[chatSeq % CHAT_COLORS.length],
+    badge: options?.badge,
+    highlight: options?.highlight,
+  };
+}
+
+function pickChat(texts: string[]): string {
+  return texts[Math.floor(Math.random() * texts.length)] ?? texts[0];
+}
+
+const IDLE_CHAT = [
+  "安安",
+  "草",
+  "www",
+  "稍等一下喔",
+  "麥克風有沒有 OK",
+  "今天也來了",
+  "待機室比正片熱鬧",
+  "ここホロライブ？",
+  "訂了",
+  "草草",
+];
+
+const CHAT_BY_MOOD: Record<string, string[]> = {
+  safe: [
+    "穩",
+    "好好休息",
+    "專業",
+    "這才叫個人勢",
+    "晚安",
+    "今天也辛苦了",
+    "不開太拚的比較好",
+  ],
+  standard: [
+    "草",
+    "名場面",
+    "訂了",
+    "這集可以剪",
+    "待機室見",
+    "www",
+    "經典",
+  ],
+  gamble: [
+    "草草草",
+    "這是在播什麼",
+    "中之人還好嗎",
+    "再一隻就過了",
+    "SAN 值看起來比 HP 低",
+    "這不是直播這是社會事件",
+    "神回預定",
+    "You Died",
+  ],
+  meme: [
+    "草草草",
+    "當代藝術",
+    "這是在播什麼",
+    "抽象",
+    "www 這就是個人勢",
+    "ここホロライブ？",
+    "嘴巴 independently 營業",
+    "不要香菜www",
+  ],
+  promo: [
+    "恭喜萬定！",
+    "月月加油",
+    "四周年快樂——",
+    "訂閱了訂閱了",
+    "先輩凸待草",
+    "衝刺 10000",
+    "台灣 V 加油",
+  ],
+  fail: [
+    "這是在播什麼",
+    "中之人還好嗎",
+    "草草草",
+    "VOD 需要剪",
+    "公關組（你自己）加油",
+    "SAN 歸零倒數",
+    "切片標題已經想好了",
+  ],
+};
+
+function moodFromOption(label: string, success: boolean): keyof typeof CHAT_BY_MOOD {
+  if (label.includes("大聲宣傳") || label.includes("月月")) {
+    return "promo";
+  }
+  if (!success) {
+    return "fail";
+  }
+  if (label.includes("豪賭")) {
+    return "gamble";
+  }
+  if (label.includes("迷因")) {
+    return "meme";
+  }
+  if (label.includes("穩健")) {
+    return "safe";
+  }
+  return "standard";
+}
+
+function buildChatBurst(label: string, success: boolean, fans: number): ChatLine[] {
+  const mood = moodFromOption(label, success);
+  const pool = CHAT_BY_MOOD[mood];
+  const extra: ChatLine[] = [];
+
+  if (success && fans >= 10_000) {
+    extra.push(
+      createChatLine("恭喜萬定！", {
+        badge: "SUB",
+        highlight: true,
+        user: "箱推A",
+      }),
+    );
+  }
+  if (label.includes("豪賭")) {
+    extra.push(
+      createChatLine("草草草", { badge: "VIP", user: "待機古參" }),
+      createChatLine("這是在播什麼", { user: "SAN監視員" }),
+    );
+  }
+  if (label.includes("迷因")) {
+    extra.push(createChatLine("當代藝術＋1", { user: "clip_職人" }));
+  }
+
+  const count = 6 + Math.floor(Math.random() * 4);
+  const lines = Array.from({ length: count }, () => createChatLine(pickChat(pool)));
+  return [...extra, ...lines].slice(0, 12);
+}
+
+function seedIdleChat(): ChatLine[] {
+  return [
+    createChatLine("初配信出道！", { badge: "MOD", user: "待機古參" }),
+    createChatLine("安安", { user: "箱推A" }),
+    createChatLine("稍等一下喔"),
+    createChatLine("麥克風有沒有 OK"),
+    createChatLine("草"),
+  ];
+}
 
 function generateSeed(): string {
   const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -106,6 +297,20 @@ function formatFans(fans: number): string {
 function formatDelta(value: number): string {
   if (value > 0) return `+${value}`;
   return `${value}`;
+}
+
+function getFandomTitle(peakFans: number, peakDrama: number, san: number): string {
+  if (peakFans >= 1_000_000) return "百萬級箱推霸主";
+  if (peakDrama >= 80) return "炎上系極限生存者";
+  if (san <= 0) return "SAN 歸零現場直播本尊";
+  if (peakFans < 500) return "零人凸待慘劇主角";
+  if (peakFans < 1_000 && peakDrama >= 40) return "地下勢解析常客";
+  if (san <= 25 && peakDrama >= 50) return "精神值比同接低的傳奇";
+  if (peakFans >= 100_000) return "切片區認證の箱推本體";
+  if (peakFans >= 10_000) return "萬定祈願成就者";
+  if (san >= 80 && peakDrama < 20) return "穩健營業の優等生";
+  if (peakDrama >= 50) return "大解析時代目擊證人";
+  return "待機室認證の名場面職人";
 }
 
 function getCareerTitle(fans: number, drama: number): string {
@@ -178,6 +383,9 @@ export default function Home() {
   const [resolveState, setResolveState] = useState<ResolveState | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [chatBurst, setChatBurst] = useState<ChatBurst | null>(null);
+  const [peakFans, setPeakFans] = useState(100);
+  const [peakDrama, setPeakDrama] = useState(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -186,6 +394,11 @@ export default function Home() {
       setSeedInput(sharedSeed);
     }
   }, []);
+
+  useEffect(() => {
+    setPeakFans((current) => Math.max(current, fans));
+    setPeakDrama((current) => Math.max(current, drama));
+  }, [fans, drama]);
 
   const isCreatePhase = !isGraduated && month === 1 && logs.length === 0;
   const careerMonths = month > 36 ? 36 : month;
@@ -207,6 +420,9 @@ export default function Home() {
     const nextName = nameInput.trim() || DEFAULT_NAME;
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
+    setPeakFans(100);
+    setPeakDrama(0);
+    setChatBurst(null);
     setCurrentEvent(pickMonthlyEvent());
     setResolveState(null);
   }
@@ -230,6 +446,12 @@ export default function Home() {
       `【第 ${stats.month} 個月】${outcome.log}`,
     );
 
+    const nextFans = Math.max(0, stats.fans + deltas.fans);
+    setChatBurst({
+      token: Date.now(),
+      lines: buildChatBurst(option.label, success, nextFans),
+    });
+
     setResolveState({
       success,
       log: outcome.log,
@@ -252,6 +474,9 @@ export default function Home() {
     setCurrentEvent(null);
     setResolveState(null);
     setCopied(false);
+    setPeakFans(100);
+    setPeakDrama(0);
+    setChatBurst(null);
     setNameInput(name || DEFAULT_NAME);
     setSeedInput(seed || DEFAULT_SEED);
   }
@@ -310,6 +535,8 @@ export default function Home() {
           fans={fans}
           drama={drama}
           san={san}
+          peakFans={peakFans}
+          peakDrama={peakDrama}
           careerMonths={careerMonths}
           topSkill={topSkill}
           downloading={downloading}
@@ -337,6 +564,7 @@ export default function Home() {
           isGraduated={isGraduated}
           onOption={handleOption}
           onNextMonth={handleNextMonth}
+          chatBurst={chatBurst}
         />
       )}
     </div>
@@ -407,6 +635,31 @@ function CreateScreen({
           </div>
         </label>
 
+        <div className="mt-3">
+          <p className="text-xs font-semibold tracking-wider text-zinc-500">
+            熱門迷因 Seed
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {MEME_SEEDS.map((memeSeed) => {
+              const active = seedInput === memeSeed;
+              return (
+                <button
+                  key={memeSeed}
+                  type="button"
+                  onClick={() => onSeedChange(memeSeed)}
+                  className={`rounded-full px-3 py-1.5 font-mono text-xs font-semibold transition ${
+                    active
+                      ? "bg-fuchsia-500 text-white shadow-[0_0_16px_rgba(217,70,239,0.45)]"
+                      : "border border-white/15 bg-zinc-900 text-zinc-300 hover:border-fuchsia-400/50 hover:text-white"
+                  }`}
+                >
+                  {memeSeed}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <button
           type="button"
           onClick={onDebut}
@@ -438,6 +691,7 @@ function LiveScreen({
   isGraduated,
   onOption,
   onNextMonth,
+  chatBurst,
 }: {
   name: string;
   seed: string;
@@ -456,6 +710,7 @@ function LiveScreen({
   isGraduated: boolean;
   onOption: (option: EventOption) => void;
   onNextMonth: () => void;
+  chatBurst: ChatBurst | null;
 }) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 md:px-8">
@@ -609,27 +864,30 @@ function LiveScreen({
           ) : null}
         </section>
 
-        <aside className="flex max-h-[70vh] flex-col rounded-2xl border border-white/10 bg-zinc-950/70 p-6 lg:col-span-3 lg:max-h-none">
-          <h2 className="mb-3 text-sm font-bold tracking-wide text-zinc-300">
-            Career Logs
-          </h2>
-          <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-            {logs.map((log, index) => {
-              const match = /^【(.+?)】(.*)$/.exec(log);
-              const tag = match?.[1] ?? "LOG";
-              const text = match?.[2] ?? log;
-              return (
-                <article
-                  key={`${index}-${log}`}
-                  className="rounded-xl border-l-2 border-fuchsia-400/70 bg-zinc-900/80 px-3 py-2"
-                >
-                  <p className="font-mono text-[10px] tracking-wider text-fuchsia-300">
-                    {tag}
-                  </p>
-                  <p className="mt-1 text-xs leading-6 text-zinc-300">{text}</p>
-                </article>
-              );
-            })}
+        <aside className="flex min-h-[28rem] flex-col gap-6 lg:col-span-3">
+          <ChatRoom burst={chatBurst} />
+          <div className="flex max-h-[42vh] min-h-[12rem] flex-1 flex-col rounded-2xl border border-white/10 bg-zinc-950/70 p-6 lg:max-h-none">
+            <h2 className="mb-3 text-sm font-bold tracking-wide text-zinc-300">
+              Career Logs
+            </h2>
+            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              {logs.map((log, index) => {
+                const match = /^【(.+?)】(.*)$/.exec(log);
+                const tag = match?.[1] ?? "LOG";
+                const text = match?.[2] ?? log;
+                return (
+                  <article
+                    key={`${index}-${log}`}
+                    className="rounded-xl border-l-2 border-fuchsia-400/70 bg-zinc-900/80 px-3 py-2"
+                  >
+                    <p className="font-mono text-[10px] tracking-wider text-fuchsia-300">
+                      {tag}
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-zinc-300">{text}</p>
+                  </article>
+                );
+              })}
+            </div>
           </div>
         </aside>
       </div>
@@ -643,6 +901,8 @@ function GraduationScreen({
   fans,
   drama,
   san,
+  peakFans,
+  peakDrama,
   careerMonths,
   topSkill,
   downloading,
@@ -656,6 +916,8 @@ function GraduationScreen({
   fans: number;
   drama: number;
   san: number;
+  peakFans: number;
+  peakDrama: number;
   careerMonths: number;
   topSkill: { label: string; value: number };
   downloading: boolean;
@@ -665,6 +927,7 @@ function GraduationScreen({
   onReincarnate: () => void;
 }) {
   const title = getCareerTitle(fans, drama);
+  const fandomTitle = getFandomTitle(peakFans, peakDrama, san);
   const quote = getGraduationQuote(name, fans, drama, san);
 
   return (
@@ -699,6 +962,17 @@ function GraduationScreen({
         >
           {title}
         </p>
+        <div
+          className="mt-4 rounded-xl px-4 py-3"
+          style={{ backgroundColor: "rgba(251, 191, 36, 0.12)", border: "1px solid #fbbf24" }}
+        >
+          <p className="text-[11px] font-bold tracking-[0.2em]" style={{ color: "#fde68a" }}>
+            同人稱號
+          </p>
+          <p className="mt-1 text-lg font-black" style={{ color: "#fef3c7" }}>
+            {fandomTitle}
+          </p>
+        </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <ReportStat label="最終訂閱數" value={formatFans(fans)} />
@@ -773,6 +1047,84 @@ function GraduationScreen({
       </div>
       </div>
     </main>
+  );
+}
+
+function ChatRoom({ burst }: { burst: ChatBurst | null }) {
+  const [lines, setLines] = useState<ChatLine[]>(() => seedIdleChat());
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setLines((current) =>
+        [...current, createChatLine(pickChat(IDLE_CHAT))].slice(-50),
+      );
+    }, 3200);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!burst) {
+      return;
+    }
+
+    const timers = burst.lines.map((line, index) =>
+      window.setTimeout(() => {
+        setLines((current) => [...current, line].slice(-50));
+      }, index * 70),
+    );
+
+    return () => {
+      for (const timer of timers) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [burst]);
+
+  useEffect(() => {
+    const node = scrollerRef.current;
+    if (!node) {
+      return;
+    }
+    node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+  }, [lines]);
+
+  return (
+    <section className="flex h-72 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0e0e10] lg:h-80">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <p className="inline-flex items-center gap-2 text-sm font-bold text-zinc-200">
+          <MessageSquare className="h-4 w-4 text-fuchsia-300" />
+          Stream Chat
+        </p>
+        <span className="text-[10px] font-semibold tracking-widest text-zinc-500">
+          LIVE
+        </span>
+      </div>
+      <div ref={scrollerRef} className="flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
+        {lines.map((line) => (
+          <p
+            key={line.id}
+            className={`animate-chat-in text-[12px] leading-5 ${line.highlight ? "rounded-md bg-amber-500/15 px-2 py-1" : ""}`}
+          >
+            {line.badge ? (
+              <span className="mr-1 rounded bg-fuchsia-600 px-1 py-px text-[9px] font-black text-white">
+                {line.badge}
+              </span>
+            ) : null}
+            <span className="mr-1.5 font-semibold" style={{ color: line.color }}>
+              {line.user}
+            </span>
+            <span className="text-zinc-200">{line.text}</span>
+          </p>
+        ))}
+      </div>
+      <div className="border-t border-white/10 px-3 py-2">
+        <p className="rounded-lg bg-zinc-900 px-3 py-2 text-[11px] text-zinc-500">
+          發送訊息（觀眾端模擬中）
+        </p>
+      </div>
+    </section>
   );
 }
 
