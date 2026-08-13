@@ -1591,8 +1591,9 @@ function GraduationScreen({
     hasColamoonCollab,
     isColaMoonPartner,
   });
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1609,7 +1610,7 @@ function GraduationScreen({
       })
         .then((dataUrl) => {
           if (!cancelled) {
-            setPreviewUrl(dataUrl);
+            setCardImageUrl(dataUrl);
           }
         })
         .catch(() => {
@@ -1626,15 +1627,22 @@ function GraduationScreen({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-4 py-6">
       <div
         id="export-card"
-        className="relative overflow-hidden rounded-3xl border-2 p-8 pb-28"
+        aria-hidden="true"
+        className="pointer-events-none"
         style={{
+          position: "fixed",
+          left: "-10000px",
+          top: 0,
+          width: "640px",
+          overflow: "hidden",
+          borderRadius: "24px",
+          border: "2px solid #c084fc",
+          padding: "32px 32px 112px",
           background:
             "linear-gradient(160deg, #1a0828 0%, #16041f 45%, #2a0b24 100%)",
-          borderColor: "#c084fc",
           color: "#faf5ff",
         }}
       >
@@ -1815,72 +1823,46 @@ function GraduationScreen({
         </div>
       </div>
 
-      {previewUrl ? (
-        <div className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-4">
-          <p className="text-xs font-semibold leading-6 text-purple-200/80">
-            📱 手機用戶若無法下載，可直接【長按圖片】儲存至相簿，解決
-            Line／FB 內建瀏覽器阻擋下載的問題。
-          </p>
-          <img
-            src={previewUrl}
-            alt={`${name} 的 VTuber 生涯畢業報告卡`}
-            className="mt-3 w-full rounded-xl border border-purple-300/20"
-          />
-        </div>
+      <header className="mb-3 text-center">
+        <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
+          GRADUATION
+        </p>
+        <h1 className="mt-1 text-xl font-black text-purple-50">
+          {name} 的畢業報告
+        </h1>
+      </header>
+
+      {cardImageUrl ? (
+        <img
+          src={cardImageUrl}
+          alt={`${name} 的 VTuber 生涯畢業報告卡`}
+          onClick={() => setZoomed(true)}
+          className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-purple-300/25 bg-[#16041f] shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+          style={{ touchAction: "pinch-zoom" }}
+        />
       ) : previewFailed ? (
-        <p className="text-center text-xs text-purple-300/70">
-          預覽圖產生失敗，請改用上方下載按鈕。
+        <p className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 px-4 py-8 text-center text-xs text-purple-300/70">
+          預覽圖產生失敗，請改用下方下載按鈕。
         </p>
       ) : (
-        <p className="text-center text-xs text-purple-300/70">正在產生可長按儲存的預覽圖……</p>
+        <p className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 px-4 py-8 text-center text-xs text-purple-300/70">
+          正在產生畢業卡片……
+        </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <button
-          type="button"
-          onClick={async () => {
-            if (previewUrl) {
-              const link = document.createElement("a");
-              link.download = `${name}-vlife-report.png`;
-              link.href = previewUrl;
-              link.click();
-              return;
-            }
-            onDownload();
-          }}
-          disabled={downloading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
-        >
-          <Download className="h-4 w-4" />
-          {downloading ? "匯出中…" : "下載生涯報告圖卡"}
-        </button>
-        <button
-          type="button"
-          onClick={onCopySeed}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-300/30 bg-purple-500/10 px-4 py-3 text-sm font-bold text-purple-100"
-        >
-          <Share2 className="h-4 w-4" />
-          {copied ? "已複製！" : "複製 Seed 連結"}
-        </button>
-        <button
-          type="button"
-          onClick={onReincarnate}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-300/20 bg-[#251f35] px-4 py-3 text-sm font-bold text-purple-100"
-        >
-          <RotateCcw className="h-4 w-4" />
-          重新轉生
-        </button>
-      </div>
+      <p className="mt-2 text-center text-[11px] leading-5 text-purple-300/75">
+        點擊放大 · 手機可長按圖片儲存至相簿
+      </p>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => {
             window.open(buildXShareUrl(name, title, seed), "_blank", "noopener,noreferrer");
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-800"
+          className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800"
         >
-          一鍵分享至 X (Twitter)
+          一鍵分享至 X
         </button>
         <button
           type="button"
@@ -1891,12 +1873,65 @@ function GraduationScreen({
               "noopener,noreferrer",
             );
           }}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-4 py-3 text-sm font-bold text-white transition hover:brightness-110"
+          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-3 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
         >
           一鍵分享至 Threads
         </button>
       </div>
+
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (cardImageUrl) {
+              const link = document.createElement("a");
+              link.download = `${name}-vlife-report.png`;
+              link.href = cardImageUrl;
+              link.click();
+              return;
+            }
+            onDownload();
+          }}
+          disabled={downloading}
+          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100 disabled:opacity-60"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {downloading ? "匯出中…" : "下載"}
+        </button>
+        <button
+          type="button"
+          onClick={onCopySeed}
+          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+          {copied ? "已複製" : "Seed"}
+        </button>
+        <button
+          type="button"
+          onClick={onReincarnate}
+          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          轉生
+        </button>
       </div>
+
+      {zoomed && cardImageUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3"
+          onClick={() => setZoomed(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="畢業卡片放大預覽"
+        >
+          <img
+            src={cardImageUrl}
+            alt={`${name} 的 VTuber 生涯畢業報告卡（放大）`}
+            className="max-h-full max-w-full cursor-zoom-out rounded-lg object-contain"
+            style={{ touchAction: "pinch-zoom" }}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }
