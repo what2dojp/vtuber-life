@@ -76,6 +76,7 @@ export const useGameStore = create<GameStore>()((set) => ({
       const sanMax = changes.sanMax ?? state.sanMax;
       const san = clamp(changes.san ?? state.san, 0, sanMax);
       const month = changes.month ?? state.month;
+      const drama = atLeastZero(changes.drama ?? state.drama);
 
       return {
         name: changes.name ?? state.name,
@@ -87,8 +88,8 @@ export const useGameStore = create<GameStore>()((set) => ({
         talk: atLeastZero(changes.talk ?? state.talk),
         singing: atLeastZero(changes.singing ?? state.singing),
         tech: atLeastZero(changes.tech ?? state.tech),
-        drama: atLeastZero(changes.drama ?? state.drama),
-        isGraduated: san <= 0 || month > 36,
+        drama,
+        isGraduated: san <= 0 || month > 36 || drama >= 100,
         logs: [logText, ...state.logs],
       };
     });
@@ -100,7 +101,7 @@ export const useGameStore = create<GameStore>()((set) => ({
 
       return {
         month,
-        ...(month > 36 ? { isGraduated: true } : {}),
+        ...(month > 36 || state.drama >= 100 ? { isGraduated: true } : {}),
       };
     });
   },

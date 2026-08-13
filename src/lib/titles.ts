@@ -13,6 +13,7 @@ export interface TitleContext {
   hasColamoonCollab: boolean;
   isColaMoonPartner: boolean;
   talent?: string | null;
+  careerBuffs?: string[];
 }
 
 export interface VTuberTitle {
@@ -46,6 +47,13 @@ function heatOf(stats: TitleContext): number {
 }
 
 export const TITLES: TitleDefinition[] = [
+  {
+    id: "pr-crisis",
+    title: "【黑紅無預警】嚴重公關危機畢業",
+    description:
+      "炎上值爆表，頻道在深夜無預警關閉。解析文比 VOD 還長，黑歷史切片成為你留下的第二個皮。",
+    condition: (s) => s.drama >= 100 || s.peakDrama >= 100,
+  },
   {
     id: "san-zero",
     title: "【SAN 歸零】精神崩潰的極限發狂人",
@@ -361,4 +369,50 @@ export function getVTuberTitle(context: TitleContext): VTuberTitle {
     title: match.title,
     quote: `${context.name}——${match.description}`,
   };
+}
+
+export function getEpilogue(context: TitleContext): string {
+  const { name, san, drama, peakDrama, talk, singing, tech, months } = context;
+  const buffs = context.careerBuffs ?? [];
+  const reach = reachOf(context);
+  const heat = Math.max(drama, peakDrama);
+
+  if (heat >= 100) {
+    return `${name} 在炎上值爆表的那晚無預警關台。公關稿寫了又刪，最後只留下「謝謝大家」。其後轉入幕後，黑歷史切片比正片更長壽，路人仍會指著螢幕說：就是那個出事的 V。`;
+  }
+
+  if (san <= 0) {
+    return `待機室還在刷「中之人還好嗎」。${name} 把皮收進硬碟，先去把心養回來。後來以同人烤肉 Man 身份出沒，專剪別人的神回，自己的麥則再也沒有打開。`;
+  }
+
+  if (buffs.includes("3d_debut") || tech >= 80) {
+    return `畢業後 ${name} 沒離開燈光，而是走進棚裡。動捕、綁骨與事故維修成了日常，後來成為小型 3D 團隊的技術總監。新人模型穿模時，第一個被呼叫的名字就是這個。`;
+  }
+
+  if (
+    (context.isColaMoonPartner ||
+      context.hasColamoonCollab ||
+      buffs.includes("agency_indie_group")) &&
+    reach >= 15_000
+  ) {
+    return `${name} 沒有消失，而是成為可樂星火社最穩的那張綠界。週年應援、凸待檔期與萬定衝刺背後，總有人默默把資源送到正確的待機室，社內私底下尊稱為核心乾爹。`;
+  }
+
+  if (buffs.includes("agency_black")) {
+    return `合約期滿，${name} 選擇退社。企業勢的流程學會了，人也累了。後來轉任活動企劃，偶爾在後台看見自己以前的切片，只笑一聲，繼續對耳機喊倒數。`;
+  }
+
+  if (talk >= 65 && singing < 55 && tech < 55) {
+    return `${name} 把直播間換成時間軸，轉型同人烤肉 Man。以前自己的名場面，現在幫別人做成 Short；海外烤肉組的群組還在，字幕與梗圖成了第二份職業。`;
+  }
+
+  if (months < 12 || reach < 3_000) {
+    return `沒有萬定煙火，也沒有炎上頭條。${name} 把皮套收進衣櫥，回到朝九晚五。同事不知道那段配信，只有下班捷運上，還會點開熟悉的 Super Chat 音效偷偷笑一下。`;
+  }
+
+  if (singing >= 70) {
+    return `舞台收了，歌聲沒有。${name} 改以數位單曲與小型 Live 繼續唱，偶爾客串可樂月月的歌回當綠葉。粉絲說這才是真正的後日談：麥還在，只是台比較小。`;
+  }
+
+  return `${name} 平安走完這段配信人生，把切片、週邊與 Super Chat 紀錄封進硬碟。之後過著普通卻溫柔的日子，偶爾仍會在週年夜打開可樂月月的台，彈幕打一句：前輩，我畢業了。`;
 }

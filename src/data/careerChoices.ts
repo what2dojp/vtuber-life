@@ -40,7 +40,7 @@ export const CAREER_CHOICES: Record<number, CareerChoicePhase> = {
           sanBoost: -25,
           dramaBoost: 15,
           passiveBuffDescription:
-            "獲得「企業勢光環」：之後每月獲得粉絲 +50%，但事件損失 SAN 值 +30%",
+            "獲得「企業勢支援」：每月被動粉絲成長 +50%，但每次選擇迷因選項會額外累積 +5 炎上值",
         },
         logText:
           "【第 12 個月人生抉擇】簽約黑心企業勢「黑潮娛樂」！流量暴增但精神壓力極大！",
@@ -91,11 +91,11 @@ export const CAREER_CHOICES: Record<number, CareerChoicePhase> = {
         description:
           "砸下所有積蓄租用專業動捕棚，進行極限 3D 披露！一旦失敗，技術穿模很可能變成迷因事故。",
         effects: {
-          fansBoost: 30000,
+          fansBoost: 15000,
           sanBoost: -15,
           dramaBoost: 10,
           passiveBuffDescription:
-            "獲得「3D 模型實體化」：歌唱與技術屬性收益永久 +50%",
+            "獲得「3D 綜藝體質」：雜談／歌力／技術收益永久 +20%",
         },
         logText:
           "【第 24 個月人生抉擇】砸重金舉辦全 3D 披露演唱會！震驚全台 VTuber 圈！",

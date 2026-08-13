@@ -32,7 +32,7 @@ import {
   type GameEvent,
 } from "@/data/events";
 import { checkChance, shuffleArray } from "@/lib/prng";
-import { getVTuberTitle } from "@/lib/titles";
+import { getEpilogue, getVTuberTitle } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
 type EventOutcome = EventSuccess | EventFailure;
@@ -151,9 +151,6 @@ function applyCareerBuffsToDeltas(
     if (next.fans > 0) {
       next.fans = Math.round(next.fans * 1.5);
     }
-    if (next.san < 0) {
-      next.san = Math.round(next.san * 1.3);
-    }
   }
 
   if (buffs.includes("agency_indie_group") && isCollabEvent(event)) {
@@ -166,11 +163,14 @@ function applyCareerBuffsToDeltas(
   }
 
   if (buffs.includes("3d_debut")) {
+    if (next.talk > 0) {
+      next.talk = Math.round(next.talk * 1.2);
+    }
     if (next.singing > 0) {
-      next.singing = Math.round(next.singing * 1.5);
+      next.singing = Math.round(next.singing * 1.2);
     }
     if (next.tech > 0) {
-      next.tech = Math.round(next.tech * 1.5);
+      next.tech = Math.round(next.tech * 1.2);
     }
   }
 
@@ -380,21 +380,51 @@ function monthlyPassiveFans(
   talk: number,
   singing: number,
   tech: number,
+  agencySupport: boolean,
 ): number {
-  return Math.floor(fans * 0.03) + (talk + singing + tech) * 15;
+  const base = Math.floor(fans * 0.03) + (talk + singing + tech) * 15;
+  return agencySupport ? Math.round(base * 1.5) : base;
 }
 
-function getDynamicBuffs(stats: {
-  san: number;
-  drama: number;
-  talk: number;
-  singing: number;
-  tech: number;
-}): { id: string; label: string; description: string; tone: string }[] {
+function getDynamicBuffs(
+  stats: {
+    san: number;
+    drama: number;
+    talk: number;
+    singing: number;
+    tech: number;
+  },
+  careerBuffs: string[] = [],
+): { id: string; label: string; description: string; tone: string }[] {
   const buffs: { id: string; label: string; description: string; tone: string }[] =
     [];
 
-  if (stats.drama >= 60) {
+  if (careerBuffs.includes("agency_black")) {
+    buffs.push({
+      id: "agency-support",
+      label: "🏢 企業勢支援",
+      description: "每月被動粉絲 +50%。選擇迷因選項時額外 +5 炎上值。",
+      tone: "border-violet-400/40 bg-violet-500/10 text-violet-100",
+    });
+  }
+
+  if (careerBuffs.includes("3d_debut")) {
+    buffs.push({
+      id: "3d-variety",
+      label: "🎬 3D 綜藝體質",
+      description: "雜談／歌力／技術收益永久 +20%。",
+      tone: "border-sky-400/40 bg-sky-500/10 text-sky-100",
+    });
+  }
+
+  if (stats.drama >= 100) {
+    buffs.push({
+      id: "drama-explode",
+      label: "🔥 公關危機",
+      description: "炎上值爆表，無預警畢業倒數中。",
+      tone: "border-red-400/50 bg-red-500/15 text-red-100",
+    });
+  } else if (stats.drama >= 60) {
     buffs.push({
       id: "drama-burn",
       label: "🔥 炎上延燒中",
@@ -616,6 +646,10 @@ export default function Home() {
       deltas.drama = Math.round(deltas.drama * 0.5);
     }
 
+    if (careerBuffs.includes("agency_black") && isMemeOption(option)) {
+      deltas.drama += 5;
+    }
+
     applyEventResult(
       toAbsoluteChanges(stats, deltas),
       `【第 ${stats.month} 個月】${outcome.log}`,
@@ -655,6 +689,7 @@ export default function Home() {
       state.talk,
       state.singing,
       state.tech,
+      careerBuffs.includes("agency_black"),
     );
     const dramaBurn = state.drama >= 60;
     if (bonus <= 0 && !dramaBurn) {
@@ -677,6 +712,18 @@ export default function Home() {
 
   function handleNextMonth() {
     applyMonthlyPassiveIncome();
+
+    const settled = useGameStore.getState();
+    if (settled.drama >= 100) {
+      if (!settled.logs[0]?.includes("嚴重公關危機")) {
+        applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
+      }
+      useGameStore.setState({ isGraduated: true });
+      setResolveState(null);
+      setCareerPhase(null);
+      return;
+    }
+
     nextMonth();
     setResolveState(null);
 
@@ -739,6 +786,16 @@ export default function Home() {
     });
 
     applyMonthlyPassiveIncome();
+    const afterPassive = useGameStore.getState();
+    if (afterPassive.drama >= 100) {
+      if (!afterPassive.logs[0]?.includes("嚴重公關危機")) {
+        applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
+      }
+      useGameStore.setState({ isGraduated: true });
+      careerSelecting.current = false;
+      return;
+    }
+
     nextMonth();
     const after = useGameStore.getState();
     careerSelecting.current = false;
@@ -838,6 +895,7 @@ export default function Home() {
           talent={
             careerBuffs.find((id) => id.startsWith("talent_"))?.slice(7) ?? null
           }
+          careerBuffs={careerBuffs}
           topSkill={topSkill}
           downloading={downloading}
           copied={copied}
@@ -1143,7 +1201,7 @@ function LiveScreen({
               accent
             />
           </section>
-          {getDynamicBuffs({ san, drama, talk, singing, tech }).map((buff) => (
+          {getDynamicBuffs({ san, drama, talk, singing, tech }, careerBuffs).map((buff) => (
             <div
               key={buff.id}
               className={`rounded-2xl border p-3.5 ${buff.tone}`}
@@ -1319,6 +1377,7 @@ function GraduationScreen({
   hasColamoonCollab,
   isColaMoonPartner,
   talent,
+  careerBuffs,
   topSkill,
   downloading,
   copied,
@@ -1341,6 +1400,7 @@ function GraduationScreen({
   hasColamoonCollab: boolean;
   isColaMoonPartner: boolean;
   talent: string | null;
+  careerBuffs: string[];
   topSkill: { label: string; value: number };
   downloading: boolean;
   copied: boolean;
@@ -1348,7 +1408,7 @@ function GraduationScreen({
   onCopySeed: () => void;
   onReincarnate: () => void;
 }) {
-  const result = getVTuberTitle({
+  const titleContext = {
     name,
     fans,
     peakFans,
@@ -1363,10 +1423,13 @@ function GraduationScreen({
     hasColamoonCollab,
     isColaMoonPartner,
     talent,
-  });
+    careerBuffs,
+  };
+  const result = getVTuberTitle(titleContext);
   const title = result.title;
   const fandomTitle = result.title;
   const quote = result.quote;
+  const epilogue = getEpilogue(titleContext);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
@@ -1425,6 +1488,24 @@ function GraduationScreen({
         <p className="mt-6 text-sm leading-7" style={{ color: "#e9d5ff" }}>
           {quote}
         </p>
+
+        <div
+          className="mt-5 rounded-xl px-4 py-3"
+          style={{
+            backgroundColor: "rgba(244,114,182,0.12)",
+            border: "1px solid rgba(244,114,182,0.45)",
+          }}
+        >
+          <p
+            className="text-[11px] font-bold tracking-[0.2em]"
+            style={{ color: "#f9a8d4" }}
+          >
+            人生後日談
+          </p>
+          <p className="mt-2 text-sm leading-7" style={{ color: "#fce7f3" }}>
+            {epilogue}
+          </p>
+        </div>
 
         <div
           className="mt-6 rounded-2xl p-4"
