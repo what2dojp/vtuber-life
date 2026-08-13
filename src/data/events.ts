@@ -52,7 +52,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         },
       },
       {
-        label: "【大聲宣傳】祝賀月月 4 周年快樂！(點擊同時引導開啟頻道)",
+        label: "【大聲宣傳】祝賀月月 4 周年快樂！",
         chance: 92,
         success: {
           log: "你在連動裡拼命喊「可樂月月四周年快樂、衝刺萬定！」月月的觀眾湧進待機室，訂閱曲線直接起飛，SAN 也回了一大格。",

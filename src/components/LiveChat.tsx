@@ -43,6 +43,42 @@ const CHAT_USERS = [
   "SAN監視員",
 ];
 
+const MEME_COMMENTS = {
+  safe: [
+    "初見安安",
+    "今天也是和平的一天",
+    "辛苦了！",
+    "好聽！",
+    "推推",
+    "卡",
+  ],
+  standard: [
+    "草草草",
+    "7777777",
+    "這台很有梗",
+    "主播皮掉了啦",
+    "888888",
+    "這也是初配信的一環嗎",
+  ],
+  gamble: [
+    "要爆了要爆了",
+    "心臟受不了",
+    "這真的可以播嗎",
+    "抖內 NT$ 1500：壓上了！",
+    "大團圓預備",
+    "全押了兄弟們",
+  ],
+  meme: [
+    "???",
+    "我到底看了什麼",
+    "這台太抽象了",
+    "阿嬤都播得比你好",
+    "抖內 NT$ 75：安安",
+    "救命啊ｗｗｗ",
+    "前世是大牌？",
+  ],
+} as const;
+
 const IDLE_CHAT = [
   "安安",
   "草",
@@ -54,6 +90,8 @@ const IDLE_CHAT = [
   "ここホロライブ？",
   "訂了",
   "草草",
+  ...MEME_COMMENTS.safe,
+  ...MEME_COMMENTS.standard,
 ];
 
 const CHAT_BY_MOOD: Record<string, string[]> = {
@@ -65,6 +103,7 @@ const CHAT_BY_MOOD: Record<string, string[]> = {
     "晚安",
     "今天也辛苦了",
     "不開太拚的比較好",
+    ...MEME_COMMENTS.safe,
   ],
   standard: [
     "草",
@@ -74,6 +113,7 @@ const CHAT_BY_MOOD: Record<string, string[]> = {
     "待機室見",
     "www",
     "經典",
+    ...MEME_COMMENTS.standard,
   ],
   gamble: [
     "草草草",
@@ -84,6 +124,7 @@ const CHAT_BY_MOOD: Record<string, string[]> = {
     "這不是直播這是社會事件",
     "神回預定",
     "You Died",
+    ...MEME_COMMENTS.gamble,
   ],
   meme: [
     "草草草",
@@ -94,6 +135,7 @@ const CHAT_BY_MOOD: Record<string, string[]> = {
     "ここホロライブ？",
     "嘴巴 independently 營業",
     "不要香菜www",
+    ...MEME_COMMENTS.meme,
   ],
   promo: [
     "恭喜萬定！",
@@ -266,7 +308,7 @@ export default function LiveChat({
         {lines.map((line) => (
           <p
             key={line.id}
-            className={`animate-chat-in text-[12px] leading-5 ${line.highlight ? "rounded-md bg-pink-500/15 px-2 py-1" : ""}`}
+            className={`animate-chat-in text-sm leading-5 ${line.highlight ? "rounded-md bg-pink-500/15 px-2 py-1" : ""}`}
           >
             {line.badge ? (
               <span className="mr-1 rounded bg-gradient-to-r from-pink-500 to-purple-500 px-1 py-px text-[9px] font-black text-white">

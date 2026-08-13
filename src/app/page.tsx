@@ -49,8 +49,6 @@ interface StatDelta {
 const DEFAULT_NAME = "星野可樂";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
-const COLAMOON_PROMO_OPTION =
-  "【大聲宣傳】祝賀月月 4 周年快樂！(點擊同時引導開啟頻道)";
 const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
 const INITIAL_STATS = {
   name: DEFAULT_NAME,
@@ -316,10 +314,6 @@ export default function Home() {
   function handleOption(option: EventOption) {
     if (resolveState) {
       return;
-    }
-
-    if (option.label === COLAMOON_PROMO_OPTION) {
-      window.open(COLAMOON_YOUTUBE, "_blank", "noopener,noreferrer");
     }
 
     let chance = option.chance;
@@ -772,12 +766,12 @@ function LiveScreen({
                 <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-pink-300">
                   EVENT STREAM
                 </p>
-                <h2 className="text-2xl font-black text-purple-100">
+                <h2 className="text-2xl font-bold text-purple-100 md:text-3xl">
                   {currentEvent.title}
                 </h2>
               </div>
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-thin">
-                <p className="whitespace-pre-line text-sm leading-8 text-purple-100/90">
+                <p className="whitespace-pre-line text-base leading-relaxed text-purple-100/90 md:text-lg">
                   {currentEvent.description}
                 </p>
                 <div className="mt-6 flex flex-col gap-3 pb-2">
@@ -787,10 +781,10 @@ function LiveScreen({
                       type="button"
                       disabled={resolveState != null}
                       onClick={() => onOption(option)}
-                      className="rounded-xl border border-purple-300/20 bg-[#1a1625]/80 px-4 py-4 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-xl border border-purple-300/20 bg-[#1a1625]/80 p-4 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40 md:p-5"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <span className="text-sm font-semibold text-purple-100">
+                        <span className="text-base font-semibold text-purple-100">
                           {option.label}
                         </span>
                         <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 font-mono text-[11px] text-purple-200">
