@@ -1986,29 +1986,39 @@ function GraduationScreen({
             : "正在產生分享圖……畢業報告已可先在上方閱讀"}
       </p>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            window.open(buildXShareUrl(name, title, seed), "_blank", "noopener,noreferrer");
-          }}
-          className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800"
+      <div className="mt-3 flex flex-col gap-2">
+        <a
+          href={COLAMOON_YOUTUBE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-red-600 via-fuchsia-500 to-amber-400 px-3 py-3 text-center text-sm font-black leading-snug text-white shadow-[0_8px_24px_rgba(244,114,182,0.35)] transition hover:brightness-110"
         >
-          一鍵分享至 X
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            window.open(
-              buildThreadsShareUrl(name, title, seed),
-              "_blank",
-              "noopener,noreferrer",
-            );
-          }}
-          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-3 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
-        >
-          一鍵分享至 Threads
-        </button>
+          🚀 前往 @colamoonie YouTube！為可樂月月四週年萬定衝刺加油！
+        </a>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              window.open(buildXShareUrl(name, title, seed), "_blank", "noopener,noreferrer");
+            }}
+            className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800"
+          >
+            一鍵分享至 X
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              window.open(
+                buildThreadsShareUrl(name, title, seed),
+                "_blank",
+                "noopener,noreferrer",
+              );
+            }}
+            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-3 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
+          >
+            一鍵分享至 Threads
+          </button>
+        </div>
       </div>
 
       <div className="mt-2 grid grid-cols-3 gap-2">
