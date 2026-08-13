@@ -67,7 +67,7 @@ export function getVTuberTitle(context: TitleContext): VTuberTitle {
   if (heat >= 85) {
     return {
       id: "flame-legend",
-      title: "全網圍剿的炎上系傳說",
+      title: "全平台圍剿的炎上系傳說",
       quote: `解析文比 VOD 還長，${name} 還是撐到了畢業。炎上是修羅場，也是名場面，歷史會記住這一天。`,
     };
   }
@@ -151,7 +151,7 @@ export function getVTuberTitle(context: TitleContext): VTuberTitle {
     return {
       id: "colamoon-partner",
       title: "可樂月月萬定衝刺最佳夥伴",
-      quote: `四周年的麥克風曾遞給 ${name}。前輩衝刺萬定的路上，這份凸待與應援會一起被寫進年報。`,
+      quote: `四週年的麥克風曾遞給 ${name}。前輩衝刺萬定的路上，這份凸待與應援會一起被寫進年報。`,
     };
   }
 
@@ -183,7 +183,7 @@ export function getVTuberTitle(context: TitleContext): VTuberTitle {
     return {
       id: "talk-ceo",
       title: "雜談台的靈魂企業家",
-      quote: `沒有大 ent 也有大話題。${name} 用一張嘴把個人勢做成品牌，客服就是自己。`,
+      quote: `沒有大事務所也有大話題。${name} 用一張嘴把個人勢做成品牌，客服就是自己。`,
     };
   }
 
@@ -191,7 +191,7 @@ export function getVTuberTitle(context: TitleContext): VTuberTitle {
     return {
       id: "model-fixer",
       title: "模型修復專家",
-      quote: `穿模、爆音、藍屏，全部當節目效果。${name} 的技術力不是後台，是第二個角色。`,
+      quote: `穿模、爆音、藍畫面，全部當節目效果。${name} 的技術力不是後台，是第二個角色。`,
     };
   }
 

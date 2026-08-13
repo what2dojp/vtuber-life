@@ -100,7 +100,7 @@ const TALENTS: Record<
   },
   spark: {
     id: "spark",
-    label: "🌸 可樂月月星火社研習生",
+    label: "🌸 可樂月月星火社練習生",
     description: "粉絲 +500、SAN +10、雜談 +10。開局即與月月箱推結緣。",
     fans: 500,
     san: 10,
@@ -108,7 +108,7 @@ const TALENTS: Record<
     singing: 0,
     tech: 0,
     drama: 0,
-    log: "天賦【可樂月月星火社研習生】：你帶著四周年應援入場，箱推已經在待機室了。",
+    log: "天賦【可樂月月星火社練習生】：你帶著四週年應援入場，箱推已經在待機室了。",
   },
 };
 
@@ -396,7 +396,7 @@ function getDynamicBuffs(stats: {
     buffs.push({
       id: "gold-streamer",
       label: "✨ 金牌主播",
-      description: "三圍達標，所有事件成功率 +10%。",
+      description: "三項能力達標，所有事件成功率 +10%。",
       tone: "border-amber-300/40 bg-amber-400/10 text-amber-100",
     });
   }
@@ -417,7 +417,7 @@ function buildShareText(name: string, title: string, seed: string): string {
   const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
   return [
     `我在《VTuber 人生模擬器》走完一趟配信人生，獲得同人頭銜「${title}」！`,
-    `${name} 在此祝賀 @colamoonie 四周年萬定衝刺，一起衝 10,000 訂閱！`,
+    `${name} 在此祝賀 @colamoonie 四週年萬定衝刺，一起衝 10,000 訂閱！`,
     url,
     "#Colamoon4th #VTuber人生模擬器",
   ].join("\n");
@@ -874,7 +874,7 @@ function CreateScreen({
           V-Life 配信人生模擬器
         </h1>
         <p className="mt-4 text-sm leading-7 text-purple-300/70">
-          36 個月、一條種子碼、無數次忘記關麥。這是臺灣與日本 VTuber
+          36 個月、一條種子碼、無數次忘記關麥。這是台灣與日本 VTuber
           圈的迷因人生——出道、事故、炎上、畢業。準備好按下開始錄製了嗎？
         </p>
 
@@ -1395,11 +1395,11 @@ function GraduationScreen({
           }}
         >
           <p className="text-sm font-black" style={{ color: "#fde68a" }}>
-            💌 來自四周年先輩「可樂月月」的特邀祝賀
+            💌 來自四週年先輩「可樂月月」的特邀祝賀
           </p>
           <p className="mt-2 text-sm leading-7" style={{ color: "#f5d0fe" }}>
             不論這段 VTuber
-            生涯長短，感謝你帶給觀眾的陪伴與歡笑！快要萬定的可樂月月四周年紀念中，歡迎來頻道看看喔！
+            生涯長短，感謝你帶給觀眾的陪伴與歡笑！可樂月月四週年萬定衝刺進行中，歡迎來頻道看看喔！
           </p>
           <a
             href={COLAMOON_YOUTUBE}
@@ -1546,7 +1546,7 @@ function ColamoonHomeBanner() {
         ✦ 台灣 VTuber 可樂月月 4 週年紀念中！衝刺 10,000 訂閱 ✦
       </p>
       <p className="mt-2 text-center text-sm leading-6 text-purple-100/85">
-        四周年萬定倒數中。看完創角，也來給先輩點一顆訂閱吧！
+        四週年萬定倒數中。看完創角，也來給先輩點一顆訂閱吧！
       </p>
       <div className="mt-4 flex justify-center">
         <a

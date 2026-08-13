@@ -68,7 +68,7 @@ const MEME_COMMENTS = {
     "聽著聽著就睡著了（讚賞意）",
     "金牌主播穩的",
     "這是可以免費看的嗎？",
-    "默默點贊",
+    "默默按讚",
   ],
   standard: [
     "草草草草草",
@@ -78,7 +78,7 @@ const MEME_COMMENTS = {
     "主播你皮掉了啦！",
     "這也是初配信的一環嗎？",
     "懂喔！",
-    "前方高能！",
+    "前方高能預警！",
     "我推的 VTuber 今天也在發光",
     "真不愧是影之強者",
     "這波操作滿分",
@@ -118,7 +118,7 @@ const MEME_COMMENTS = {
     "笑到肚子痛",
     "聽說這裡有怪人",
     "這是人類能做出來的節目嗎",
-    "全網大解析時代",
+    "全平台大解析時代",
     "草（日文）",
   ],
 } as const;
@@ -146,7 +146,7 @@ const CHAT_BY_MOOD: Record<string, string[]> = {
   promo: [
     "恭喜萬定！",
     "月月加油",
-    "四周年快樂——",
+    "四週年快樂——",
     "訂閱了訂閱了",
     "先輩凸待草",
     "衝刺 10000",
@@ -313,7 +313,7 @@ export default function LiveChat({
         rel="noopener noreferrer"
         className="shrink-0 border-b border-amber-300/40 bg-gradient-to-r from-amber-500/20 via-yellow-400/15 to-pink-500/20 px-3 py-2 text-[11px] font-bold leading-5 text-amber-200 hover:text-amber-100"
       >
-        📌【系統公告】可樂月月 4 週年萬定衝刺中！快來點擊支持！
+        📌【系統公告】可樂月月 4 週年萬定衝刺中！快來點進來應援！
       </a>
       <div
         ref={scrollerRef}
