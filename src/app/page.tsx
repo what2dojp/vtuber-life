@@ -2,6 +2,7 @@
 
 import { toPng } from "html-to-image";
 import {
+  AlertTriangle,
   Download,
   Flame,
   Heart,
@@ -31,7 +32,7 @@ import {
   type EventSuccess,
   type GameEvent,
 } from "@/data/events";
-import { checkChance, shuffleArray } from "@/lib/prng";
+import { checkChance, getRandomInt, shuffleArray } from "@/lib/prng";
 import { getEpilogue, getVTuberTitle } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
@@ -350,6 +351,10 @@ function isMemeOption(option: EventOption): boolean {
   return option.type === "meme" || option.label.includes("迷因");
 }
 
+function isSteadyOption(option: EventOption): boolean {
+  return option.type === "steady" || option.label.includes("穩健");
+}
+
 function getEffectiveChance(
   option: EventOption,
   stats: Pick<PlayerStats, "talk" | "singing" | "tech">,
@@ -526,6 +531,7 @@ export default function Home() {
   const [danmakuTrigger, setDanmakuTrigger] = useState<number | null>(null);
   const [hasCollab, setHasCollab] = useState(false);
   const [hasColamoonCollab, setHasColamoonCollab] = useState(false);
+  const [crisisOverlay, setCrisisOverlay] = useState(false);
   const careerSelecting = useRef(false);
   const eventDeckRef = useRef<GameEvent[]>([]);
   const eventCursorRef = useRef(0);
@@ -576,6 +582,7 @@ export default function Home() {
     setHasCollab(false);
     setHasColamoonCollab(false);
     careerSelecting.current = false;
+    setCrisisOverlay(false);
     setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
     setResolveState(null);
 
@@ -599,6 +606,17 @@ export default function Home() {
       setHasColamoonCollab(true);
       setCareerBuffs([`talent_${talent}`]);
     }
+  }
+
+  function triggerCrisisRetirement() {
+    const state = useGameStore.getState();
+    if (!state.logs[0]?.includes("嚴重公關危機")) {
+      applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
+    }
+    useGameStore.setState({ isGraduated: true });
+    setCrisisOverlay(true);
+    setResolveState(null);
+    setCareerPhase(null);
   }
 
   function handleOption(option: EventOption) {
@@ -650,16 +668,31 @@ export default function Home() {
       deltas.drama += 5;
     }
 
-    applyEventResult(
-      toAbsoluteChanges(stats, deltas),
-      `【第 ${stats.month} 個月】${outcome.log}`,
-    );
+    let logText = `【第 ${stats.month} 個月】${outcome.log}`;
+
+    if (success && isSteadyOption(option)) {
+      const cool = getRandomInt(10, 15);
+      const projected = stats.drama + deltas.drama;
+      const cooled = Math.max(0, projected - cool);
+      deltas.drama = cooled - stats.drama;
+      if (projected - cooled > 0) {
+        logText += `（公關危機成功降溫，炎上值 -${projected - cooled}）`;
+      }
+    }
+
+    applyEventResult(toAbsoluteChanges(stats, deltas), logText);
 
     if (isCollabEvent(currentEvent)) {
       setHasCollab(true);
     }
     if (currentEvent?.id === "colamoon_collab") {
       setHasColamoonCollab(true);
+    }
+
+    const after = useGameStore.getState();
+    if (after.drama >= 100) {
+      triggerCrisisRetirement();
+      return;
     }
 
     const nextFans = Math.max(0, stats.fans + deltas.fans);
@@ -677,7 +710,7 @@ export default function Home() {
 
     setResolveState({
       success,
-      log: outcome.log,
+      log: logText.replace(`【第 ${stats.month} 個月】`, ""),
       deltas,
     });
   }
@@ -715,12 +748,7 @@ export default function Home() {
 
     const settled = useGameStore.getState();
     if (settled.drama >= 100) {
-      if (!settled.logs[0]?.includes("嚴重公關危機")) {
-        applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
-      }
-      useGameStore.setState({ isGraduated: true });
-      setResolveState(null);
-      setCareerPhase(null);
+      triggerCrisisRetirement();
       return;
     }
 
@@ -788,10 +816,7 @@ export default function Home() {
     applyMonthlyPassiveIncome();
     const afterPassive = useGameStore.getState();
     if (afterPassive.drama >= 100) {
-      if (!afterPassive.logs[0]?.includes("嚴重公關危機")) {
-        applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
-      }
-      useGameStore.setState({ isGraduated: true });
+      triggerCrisisRetirement();
       careerSelecting.current = false;
       return;
     }
@@ -820,6 +845,7 @@ export default function Home() {
     setHasCollab(false);
     setHasColamoonCollab(false);
     careerSelecting.current = false;
+    setCrisisOverlay(false);
     eventDeckRef.current = [];
     eventCursorRef.current = 0;
     usedEventIdsRef.current = new Set();
@@ -873,6 +899,11 @@ export default function Home() {
           onSeedChange={setSeedInput}
           onRandomSeed={() => setSeedInput(generateSeed())}
           onDebut={handleDebut}
+        />
+      ) : crisisOverlay ? (
+        <CrisisRetirementOverlay
+          drama={drama}
+          onContinue={() => setCrisisOverlay(false)}
         />
       ) : isGraduated && !resolveState ? (
         <GraduationScreen
@@ -930,6 +961,40 @@ export default function Home() {
         />
       )}
       <FullScreenDanmaku trigger={danmakuTrigger} />
+    </div>
+  );
+}
+
+function CrisisRetirementOverlay({
+  drama,
+  onContinue,
+}: {
+  drama: number;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/90 px-4 backdrop-blur-md">
+      <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_center,rgba(239,68,68,0.35),transparent_62%)]" />
+      <div className="relative w-full max-w-lg rounded-3xl border-2 border-red-400 bg-[#2a0b12] p-8 text-center shadow-[0_0_64px_rgba(239,68,68,0.55)]">
+        <p className="text-xs font-black tracking-[0.35em] text-red-300">
+          FORCED RETIREMENT
+        </p>
+        <h2 className="mt-4 text-3xl font-black leading-tight text-red-100">
+          🔥 嚴重公關危機
+          <br />
+          被迫無預警引退
+        </h2>
+        <p className="mt-4 text-sm leading-7 text-red-100/85">
+          炎上值已達 {drama}。頻道在深夜無預警關閉，後續將進入畢業後日談結算。
+        </p>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="mt-8 w-full rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 px-6 py-4 text-lg font-black text-white shadow-[0_0_28px_rgba(239,68,68,0.45)] transition hover:brightness-110"
+        >
+          進入畢業後日談
+        </button>
+      </div>
     </div>
   );
 }
@@ -1216,6 +1281,15 @@ function LiveScreen({
         </aside>
 
         <section className="relative flex h-auto min-h-[420px] flex-col rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
+          {drama >= 85 && drama < 100 ? (
+            <div className="mb-4 animate-pulse rounded-2xl border-2 border-red-500 bg-red-600/25 px-4 py-3 shadow-[0_0_28px_rgba(239,68,68,0.45)]">
+              <p className="inline-flex items-start gap-2 text-sm font-black leading-6 text-red-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                ⚠️ 公關危機已達臨界點 (Drama: {drama})！若達到 100
+                將面臨強制無預警引退！請盡快選擇【穩健】選項進行公關洗白！
+              </p>
+            </div>
+          ) : null}
           {careerPhase ? (
             <div className="flex min-h-[420px] flex-col justify-center text-center">
               <p className="text-[11px] font-semibold tracking-[0.25em] text-pink-300">
