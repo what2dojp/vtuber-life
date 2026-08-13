@@ -39,6 +39,27 @@ const OPTION_PREFIX = {
   meme: "【迷因】",
 } as const;
 
+function balanceSteadyOption(option: EventOption): EventOption {
+  if (option.type !== "steady") {
+    return option;
+  }
+
+  const chance =
+    option.chance >= 75 && option.chance <= 80
+      ? option.chance
+      : 75 + (option.chance % 6);
+  const failSan = option.failure.san;
+
+  return {
+    ...option,
+    chance,
+    failure: {
+      ...option.failure,
+      san: failSan != null && failSan < 0 ? failSan : -8,
+    },
+  };
+}
+
 function opt(
   type: EventOption["type"],
   chance: number,
@@ -46,13 +67,13 @@ function opt(
   success: EventSuccess,
   failure: EventFailure,
 ): EventOption {
-  return {
+  return balanceSteadyOption({
     type,
     chance,
     label: `${OPTION_PREFIX[type]}${label}`,
     success,
     failure,
-  };
+  });
 }
 
 export const RANDOM_EVENTS: GameEvent[] = [
@@ -65,7 +86,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】禮貌獻上四週年祝福，擔任貼心綠葉與主持人。",
         type: "steady",
-        chance: 95,
+        chance: 80,
         success: {
           log: "直播氣氛極度溫馨！獲得月月粉絲的一致好評，吸粉無數！",
           fans: 1500,
@@ -75,7 +96,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
         failure: {
           log: "因為太過緊張講話有點結巴，但大家依然覺得你很可愛。",
           fans: 500,
-          san: 5,
+          san: -8,
         },
       },
       {
@@ -139,7 +160,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】火速切斷電源，並在 Twitter 發文親切致歉表示吃很飽。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "觀眾覺得你非常接地氣，社群風向一片溫馨化解危機。",
           fans: 800,
@@ -209,7 +230,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】臨危不亂改為個人單口相聲，感謝觀眾一路陪伴。",
         type: "steady",
-        chance: 85,
+        chance: 76,
         success: {
           log: "展現極高情商與單口相聲功力，同看人數穩健成長。",
           fans: 1200,
@@ -279,7 +300,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】體會精神極限，果斷宣布先下播休息明天再戰。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "觀眾讚許你的健康作息，熱情留言預約明天通關時刻！",
           fans: 1000,
@@ -347,7 +368,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】迅速刪除爭議存檔，發文向版權方申訴與說明。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "處理迅速得當，頻道警告順利撤銷，危機解除。",
           fans: 500,
@@ -415,7 +436,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】不予理會冷處理，專注於當前直播內容品質。",
         type: "steady",
-        chance: 85,
+        chance: 76,
         success: {
           log: "粉絲們自主幫忙檢舉爆料，事件在一週內冷卻平息。",
           fans: 1000,
@@ -485,7 +506,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】緊急切換回預設靜態待機圖，冷靜聯繫繪師與模型師修復。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "反應迅速得當，繪師媽媽迅速連線救援完成修正。",
           fans: 800,
@@ -554,7 +575,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】委婉且明確地表明 VTuber 與觀眾的界線，感謝支持。",
         type: "steady",
-        chance: 85,
+        chance: 76,
         success: {
           log: "處理得體維護了直播間秩序，獲得全體觀眾的尊重。",
           fans: 1500,
@@ -624,7 +645,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】發佈聯合聲明澄清只是系統 Bug，並曬出私下合照。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "迅速平息不實傳言，箱推粉絲紛紛鬆了一口氣。",
           fans: 1000,
@@ -694,7 +715,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】冷靜打圓場，強調是個人操作問題，並順利完成流程。",
         type: "steady",
-        chance: 85,
+        chance: 76,
         success: {
           log: "敬業與臨場反應獲得廠商讚許，順利結案拿到尾款。",
           fans: 1000,
@@ -764,7 +785,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】準備充足的溫開水與護嗓配方，穩定輸出優美歌聲。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "歌聲始終維持高水準，順利達成訂閱目標且喉嚨無負擔！",
           fans: 2000,
@@ -835,7 +856,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       {
         label: "【穩健】在 Short 留言區親切用英文 / 日文留言感謝，引導路人關注。",
         type: "steady",
-        chance: 90,
+        chance: 78,
         success: {
           log: "國際化形象提升，成功將路過流量轉化為長期海外訂閱者！",
           fans: 3500,
@@ -1496,4 +1517,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
       opt("meme", 60, "把所有相似皮拉進合照，開「克隆人家族聚會」。", { log: "克隆人聚會成為 VR 名場面，世界觀直接擴張！", fans: 7000, talk: 8, drama: 12 }, { log: "人太多當機，連動提早結束……", fans: 500, san: -12 }),
     ],
   },
-];
+].map((event) => ({
+  ...event,
+  options: event.options.map(balanceSteadyOption),
+}));

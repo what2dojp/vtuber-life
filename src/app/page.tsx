@@ -13,7 +13,7 @@ import {
   Trophy,
   Tv,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import LiveChat, {
   buildChatBurst,
   FullScreenDanmaku,
@@ -272,7 +272,13 @@ function optionEffectHint(option: EventOption): string {
           ? "低風險穩健"
           : "均衡發展";
   const effects = [
-    option.success.fans ? `Fans ${formatDelta(option.success.fans)}` : null,
+    option.success.fans
+      ? `Fans ${formatDelta(
+          option.type === "steady"
+            ? Math.round(option.success.fans / 2)
+            : option.success.fans,
+        )}`
+      : null,
     option.success.san ? `SAN ${formatDelta(option.success.san)}` : null,
     option.success.talk ? `Talk ${formatDelta(option.success.talk)}` : null,
     option.success.singing
@@ -380,6 +386,10 @@ function getEffectiveChance(
     chance = Math.min(100, chance + 10);
   }
 
+  if (isSteadyOption(option)) {
+    return Math.min(80, chance);
+  }
+
   return chance;
 }
 
@@ -389,9 +399,11 @@ function monthlyPassiveFans(
   singing: number,
   tech: number,
   agencySupport: boolean,
+  trafficStagnation = false,
 ): number {
   const base = Math.floor(fans * 0.03) + (talk + singing + tech) * 15;
-  return agencySupport ? Math.round(base * 1.5) : base;
+  const withAgency = agencySupport ? Math.round(base * 1.5) : base;
+  return trafficStagnation ? Math.round(withAgency * 0.5) : withAgency;
 }
 
 function getDynamicBuffs(
@@ -403,9 +415,19 @@ function getDynamicBuffs(
     tech: number;
   },
   careerBuffs: string[] = [],
+  trafficStagnation = false,
 ): { id: string; label: string; description: string; tone: string }[] {
   const buffs: { id: string; label: string; description: string; tone: string }[] =
     [];
+
+  if (trafficStagnation) {
+    buffs.push({
+      id: "traffic-stagnation",
+      label: "💤 流量停滯",
+      description: "連續穩健導致頻道疲乏。每月被動粉絲成長 -50%。選擇標準／豪賭／迷因可解除。",
+      tone: "border-slate-400/40 bg-slate-500/10 text-slate-100",
+    });
+  }
 
   if (careerBuffs.includes("agency_black")) {
     buffs.push({
@@ -535,6 +557,8 @@ export default function Home() {
   const [hasCollab, setHasCollab] = useState(false);
   const [hasColamoonCollab, setHasColamoonCollab] = useState(false);
   const [crisisOverlay, setCrisisOverlay] = useState(false);
+  const [steadyStreak, setSteadyStreak] = useState(0);
+  const [trafficStagnation, setTrafficStagnation] = useState(false);
   const careerSelecting = useRef(false);
   const eventDeckRef = useRef<GameEvent[]>([]);
   const eventCursorRef = useRef(0);
@@ -586,6 +610,8 @@ export default function Home() {
     setHasColamoonCollab(false);
     careerSelecting.current = false;
     setCrisisOverlay(false);
+    setSteadyStreak(0);
+    setTrafficStagnation(false);
     setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
     setResolveState(null);
 
@@ -663,6 +689,10 @@ export default function Home() {
       deltas.fans = Math.round(deltas.fans * 1.3);
     }
 
+    if (success && isSteadyOption(option) && deltas.fans > 0) {
+      deltas.fans = Math.round(deltas.fans * 0.5);
+    }
+
     if (careerBuffs.includes("talent_mechanic") && deltas.drama > 0) {
       deltas.drama = Math.round(deltas.drama * 0.5);
     }
@@ -680,6 +710,21 @@ export default function Home() {
       deltas.drama = cooled - stats.drama;
       if (projected - cooled > 0) {
         logText += `（公關危機成功降溫，炎上值 -${projected - cooled}）`;
+      }
+    }
+
+    if (isSteadyOption(option)) {
+      const nextStreak = steadyStreak + 1;
+      setSteadyStreak(nextStreak);
+      if (nextStreak >= 3 && !trafficStagnation) {
+        setTrafficStagnation(true);
+        logText += "（💤 連續穩健，觸發【流量停滯】：每月被動粉絲成長 -50%）";
+      }
+    } else {
+      setSteadyStreak(0);
+      if (trafficStagnation) {
+        setTrafficStagnation(false);
+        logText += "（流量停滯已解除）";
       }
     }
 
@@ -726,6 +771,7 @@ export default function Home() {
       state.singing,
       state.tech,
       careerBuffs.includes("agency_black"),
+      trafficStagnation,
     );
     const dramaBurn = state.drama >= 60;
     if (bonus <= 0 && !dramaBurn) {
@@ -733,7 +779,9 @@ export default function Home() {
     }
 
     const parts = [
-      bonus > 0 ? `被動成長 +${bonus} 粉絲` : null,
+      bonus > 0
+        ? `被動成長 +${bonus} 粉絲${trafficStagnation ? "（流量停滯 -50%）" : ""}`
+        : null,
       dramaBurn ? "炎上延燒 SAN -5" : null,
     ].filter((part): part is string => part != null);
 
@@ -849,6 +897,8 @@ export default function Home() {
     setHasColamoonCollab(false);
     careerSelecting.current = false;
     setCrisisOverlay(false);
+    setSteadyStreak(0);
+    setTrafficStagnation(false);
     eventDeckRef.current = [];
     eventCursorRef.current = 0;
     usedEventIdsRef.current = new Set();
@@ -864,15 +914,13 @@ export default function Home() {
 
     setDownloading(true);
     try {
-      const dataUrl = await toPng(node, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#16041f",
-      });
+      const dataUrl = await exportGraduationPng(node);
       const link = document.createElement("a");
       link.download = `${name}-vlife-report.png`;
       link.href = dataUrl;
       link.click();
+    } catch {
+      window.alert("圖片匯出失敗，請直接截圖儲存畢業報告。");
     } finally {
       setDownloading(false);
     }
@@ -952,6 +1000,7 @@ export default function Home() {
           tech={tech}
           drama={drama}
           careerBuffs={careerBuffs}
+          trafficStagnation={trafficStagnation}
           logs={logs}
           currentEvent={currentEvent}
           resolveState={resolveState}
@@ -1160,6 +1209,7 @@ function LiveScreen({
   tech,
   drama,
   careerBuffs,
+  trafficStagnation,
   logs,
   currentEvent,
   resolveState,
@@ -1183,6 +1233,7 @@ function LiveScreen({
   tech: number;
   drama: number;
   careerBuffs: string[];
+  trafficStagnation: boolean;
   logs: string[];
   currentEvent: GameEvent | null;
   resolveState: ResolveState | null;
@@ -1269,7 +1320,11 @@ function LiveScreen({
               accent
             />
           </section>
-          {getDynamicBuffs({ san, drama, talk, singing, tech }, careerBuffs).map((buff) => (
+          {getDynamicBuffs(
+            { san, drama, talk, singing, tech },
+            careerBuffs,
+            trafficStagnation,
+          ).map((buff) => (
             <div
               key={buff.id}
               className={`rounded-2xl border p-3.5 ${buff.tone}`}
@@ -1510,6 +1565,92 @@ function getAnniversaryBadges(input: {
   return picked.map(({ emoji, label }) => ({ emoji, label }));
 }
 
+const GRADUATION_CARD_STYLE: CSSProperties = {
+  position: "relative",
+  overflow: "hidden",
+  borderRadius: "24px",
+  border: "2px solid #c084fc",
+  padding: "32px 32px 112px",
+  background:
+    "linear-gradient(160deg, #1a0828 0%, #16041f 45%, #2a0b24 100%)",
+  color: "#faf5ff",
+};
+
+function waitForHtmlImage(img: HTMLImageElement): Promise<void> {
+  if (img.complete && img.naturalWidth > 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    const finish = () => {
+      img.removeEventListener("load", finish);
+      img.removeEventListener("error", finish);
+      resolve();
+    };
+    img.addEventListener("load", finish);
+    img.addEventListener("error", finish);
+  });
+}
+
+function waitForUrlImage(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve();
+    image.onerror = () => resolve();
+    image.src = url;
+  });
+}
+
+function collectBackgroundImageUrls(root: HTMLElement): string[] {
+  const urls: string[] = [];
+  const nodes = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+
+  for (const node of nodes) {
+    const background = getComputedStyle(node).backgroundImage;
+    if (!background || background === "none") {
+      continue;
+    }
+
+    for (const match of background.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
+      const url = match[2];
+      if (url) {
+        urls.push(url);
+      }
+    }
+  }
+
+  return urls;
+}
+
+async function waitForCardAssets(root: HTMLElement): Promise<void> {
+  if (document.fonts?.ready) {
+    await document.fonts.ready;
+  }
+
+  await Promise.all(
+    Array.from(root.querySelectorAll("img")).map(waitForHtmlImage),
+  );
+  await Promise.all(collectBackgroundImageUrls(root).map(waitForUrlImage));
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
+async function exportGraduationPng(node: HTMLElement): Promise<string> {
+  await waitForCardAssets(node);
+  const dataUrl = await toPng(node, {
+    cacheBust: true,
+    pixelRatio: 2,
+    backgroundColor: "#16041f",
+  });
+
+  if (!dataUrl.startsWith("data:image") || dataUrl.length < 500) {
+    throw new Error("graduation png is empty");
+  }
+
+  return dataUrl;
+}
+
 function GraduationScreen({
   name,
   seed,
@@ -1594,57 +1735,71 @@ function GraduationScreen({
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
+  const showHtmlCard = cardImageUrl == null;
 
   useEffect(() => {
     let cancelled = false;
-    const timer = window.setTimeout(() => {
+
+    void (async () => {
       const node = document.getElementById("export-card");
       if (!(node instanceof HTMLElement)) {
+        if (!cancelled) {
+          setPreviewFailed(true);
+        }
         return;
       }
 
-      void toPng(node, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#16041f",
-      })
-        .then((dataUrl) => {
-          if (!cancelled) {
-            setCardImageUrl(dataUrl);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setPreviewFailed(true);
-          }
-        });
-    }, 280);
+      try {
+        const dataUrl = await exportGraduationPng(node);
+        if (!cancelled) {
+          setCardImageUrl(dataUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          setPreviewFailed(true);
+        }
+      }
+    })();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
   }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-4 py-6">
+      <header className="mb-3 text-center">
+        <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
+          GRADUATION
+        </p>
+        <h1 className="mt-1 text-xl font-black text-purple-50">
+          {name} 的畢業報告
+        </h1>
+      </header>
+
+      {cardImageUrl ? (
+        <img
+          src={cardImageUrl}
+          alt={`${name} 的 VTuber 生涯畢業報告卡`}
+          onClick={() => setZoomed(true)}
+          className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-purple-300/25 bg-[#16041f] shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+          style={{ touchAction: "pinch-zoom" }}
+        />
+      ) : null}
+
       <div
         id="export-card"
-        aria-hidden="true"
-        className="pointer-events-none"
-        style={{
-          position: "fixed",
-          left: "-10000px",
-          top: 0,
-          width: "640px",
-          overflow: "hidden",
-          borderRadius: "24px",
-          border: "2px solid #c084fc",
-          padding: "32px 32px 112px",
-          background:
-            "linear-gradient(160deg, #1a0828 0%, #16041f 45%, #2a0b24 100%)",
-          color: "#faf5ff",
-        }}
+        aria-hidden={cardImageUrl ? true : undefined}
+        className={
+          showHtmlCard
+            ? "relative w-full shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+            : "hidden"
+        }
+        style={
+          showHtmlCard
+            ? { ...GRADUATION_CARD_STYLE, touchAction: "pinch-zoom" }
+            : undefined
+        }
       >
         <p
           className="text-xs font-bold tracking-[0.35em]"
@@ -1823,35 +1978,12 @@ function GraduationScreen({
         </div>
       </div>
 
-      <header className="mb-3 text-center">
-        <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
-          GRADUATION
-        </p>
-        <h1 className="mt-1 text-xl font-black text-purple-50">
-          {name} 的畢業報告
-        </h1>
-      </header>
-
-      {cardImageUrl ? (
-        <img
-          src={cardImageUrl}
-          alt={`${name} 的 VTuber 生涯畢業報告卡`}
-          onClick={() => setZoomed(true)}
-          className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-purple-300/25 bg-[#16041f] shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
-          style={{ touchAction: "pinch-zoom" }}
-        />
-      ) : previewFailed ? (
-        <p className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 px-4 py-8 text-center text-xs text-purple-300/70">
-          預覽圖產生失敗，請改用下方下載按鈕。
-        </p>
-      ) : (
-        <p className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 px-4 py-8 text-center text-xs text-purple-300/70">
-          正在產生畢業卡片……
-        </p>
-      )}
-
       <p className="mt-2 text-center text-[11px] leading-5 text-purple-300/75">
-        點擊放大 · 手機可長按圖片儲存至相簿
+        {cardImageUrl
+          ? "點擊放大 · 手機可長按圖片儲存至相簿"
+          : previewFailed
+            ? "已改以網頁版顯示畢業報告 · 可直接截圖儲存"
+            : "正在產生分享圖……畢業報告已可先在上方閱讀"}
       </p>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
