@@ -451,7 +451,7 @@ function getDynamicBuffs(
     buffs.push({
       id: "drama-explode",
       label: "🔥 公關危機",
-      description: "炎上值爆表，無預警畢業倒數中。",
+      description: "炎上值爆表，無預警引退倒數中。",
       tone: "border-red-400/50 bg-red-500/15 text-red-100",
     });
   } else if (stats.drama >= 60) {
@@ -640,7 +640,7 @@ export default function Home() {
   function triggerCrisisRetirement() {
     const state = useGameStore.getState();
     if (!state.logs[0]?.includes("嚴重公關危機")) {
-      applyEventResult({}, "🔥 嚴重公關危機，被迫無預警畢業");
+      applyEventResult({}, "🔥 嚴重公關危機，被迫無預警引退");
     }
     useGameStore.setState({ isGraduated: true });
     setCrisisOverlay(true);
@@ -920,7 +920,7 @@ export default function Home() {
       link.href = dataUrl;
       link.click();
     } catch {
-      window.alert("圖片匯出失敗，請直接截圖儲存畢業報告。");
+      window.alert("圖片匯出失敗，請直接截圖儲存生涯成果報告。");
     } finally {
       setDownloading(false);
     }
@@ -1037,14 +1037,14 @@ function CrisisRetirementOverlay({
           被迫無預警引退
         </h2>
         <p className="mt-4 text-sm leading-7 text-red-100/85">
-          炎上值已達 {drama}。頻道在深夜無預警關閉，後續將進入畢業後日談結算。
+          炎上值已達 {drama}。頻道在深夜無預警關閉，後續將進入生涯成果結算。
         </p>
         <button
           type="button"
           onClick={onContinue}
           className="mt-8 w-full rounded-2xl bg-gradient-to-r from-red-600 to-orange-500 px-6 py-4 text-lg font-black text-white shadow-[0_0_28px_rgba(239,68,68,0.45)] transition hover:brightness-110"
         >
-          進入畢業後日談
+          查看生涯成果報告
         </button>
       </div>
     </div>
@@ -1082,7 +1082,7 @@ function CreateScreen({
         </h1>
         <p className="mt-4 text-sm leading-7 text-purple-300/70">
           36 個月、一條種子碼、無數次忘記關麥。這是台灣與日本 VTuber
-          圈的迷因人生——出道、事故、炎上、畢業。準備好按下開始錄製了嗎？
+          圈的迷因人生——出道、事故、炎上、圓滿達成。準備好按下開始錄製了嗎？
         </p>
 
         <label className="mt-8 block text-xs font-semibold tracking-wider text-purple-300/70">
@@ -1450,7 +1450,7 @@ function LiveScreen({
                   className="mt-5 w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 py-3 text-sm font-bold text-white transition hover:brightness-110"
                 >
                   {isGraduated
-                    ? "查看生涯畢業報告"
+                    ? "查看生涯成果報告"
                     : "進入下一個月 (Next Month)"}
                 </button>
               </div>
@@ -1736,6 +1736,7 @@ function GraduationScreen({
   const [previewFailed, setPreviewFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const showHtmlCard = cardImageUrl == null;
+  const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -1770,17 +1771,24 @@ function GraduationScreen({
     <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-4 py-6">
       <header className="mb-3 text-center">
         <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
-          GRADUATION
+          {isCrisisExit ? "FORCED RETIREMENT" : "MILESTONE"}
         </p>
         <h1 className="mt-1 text-xl font-black text-purple-50">
-          {name} 的畢業報告
+          {name} 的生涯成果報告
         </h1>
+        <p
+          className={`mt-2 text-sm font-black ${isCrisisExit ? "text-red-300" : "text-amber-200"}`}
+        >
+          {isCrisisExit
+            ? "被迫無預警引退"
+            : "🎉 創作者生涯圓滿達成！"}
+        </p>
       </header>
 
       {cardImageUrl ? (
         <img
           src={cardImageUrl}
-          alt={`${name} 的 VTuber 生涯畢業報告卡`}
+          alt={`${name} 的 VTuber 生涯成果卡`}
           onClick={() => setZoomed(true)}
           className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-purple-300/25 bg-[#16041f] shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
           style={{ touchAction: "pinch-zoom" }}
@@ -1805,7 +1813,7 @@ function GraduationScreen({
           className="text-xs font-bold tracking-[0.35em]"
           style={{ color: "#f0abfc" }}
         >
-          VTUBER 生涯畢業報告卡
+          VTUBER 生涯成果卡
         </p>
         <div className="mt-3 flex items-center gap-2">
           <Trophy className="h-6 w-6" style={{ color: "#f5d0fe" }} />
@@ -1982,8 +1990,8 @@ function GraduationScreen({
         {cardImageUrl
           ? "點擊放大 · 手機可長按圖片儲存至相簿"
           : previewFailed
-            ? "已改以網頁版顯示畢業報告 · 可直接截圖儲存"
-            : "正在產生分享圖……畢業報告已可先在上方閱讀"}
+            ? "已改以網頁版顯示生涯成果卡 · 可直接截圖儲存"
+            : "正在產生分享圖……生涯成果卡已可先在上方閱讀"}
       </p>
 
       <div className="mt-3 flex flex-col gap-2">
@@ -2021,7 +2029,7 @@ function GraduationScreen({
         </div>
       </div>
 
-      <div className="mt-2 grid grid-cols-3 gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => {
@@ -2035,27 +2043,29 @@ function GraduationScreen({
             onDownload();
           }}
           disabled={downloading}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100 disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-purple-300/20 bg-purple-500/10 px-3 py-2.5 text-sm font-bold text-purple-100 disabled:opacity-60"
         >
-          <Download className="h-3.5 w-3.5" />
-          {downloading ? "匯出中…" : "下載"}
+          <Download className="h-4 w-4" />
+          {downloading ? "匯出中…" : "下載生涯成果卡 (PNG)"}
         </button>
-        <button
-          type="button"
-          onClick={onCopySeed}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100"
-        >
-          <Share2 className="h-3.5 w-3.5" />
-          {copied ? "已複製" : "Seed"}
-        </button>
-        <button
-          type="button"
-          onClick={onReincarnate}
-          className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100"
-        >
-          <RotateCcw className="h-3.5 w-3.5" />
-          轉生
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={onCopySeed}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100"
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            {copied ? "已複製" : "Seed"}
+          </button>
+          <button
+            type="button"
+            onClick={onReincarnate}
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            轉生
+          </button>
+        </div>
       </div>
 
       {zoomed && cardImageUrl ? (
@@ -2064,11 +2074,11 @@ function GraduationScreen({
           onClick={() => setZoomed(false)}
           role="dialog"
           aria-modal="true"
-          aria-label="畢業卡片放大預覽"
+          aria-label="生涯成果卡放大預覽"
         >
           <img
             src={cardImageUrl}
-            alt={`${name} 的 VTuber 生涯畢業報告卡（放大）`}
+            alt={`${name} 的 VTuber 生涯成果卡（放大）`}
             className="max-h-full max-w-full cursor-zoom-out rounded-lg object-contain"
             style={{ touchAction: "pinch-zoom" }}
           />

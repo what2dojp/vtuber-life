@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VTuber 人生模擬器",
   description:
-    "36 個月配信人生：出道、事故、炎上、畢業。台灣繁體中文 VTuber 迷因模擬器。",
+    "36 個月配信人生：出道、事故、炎上、圓滿達成。台灣繁體中文 VTuber 迷因模擬器。",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

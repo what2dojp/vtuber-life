@@ -49,7 +49,7 @@ function heatOf(stats: TitleContext): number {
 export const TITLES: TitleDefinition[] = [
   {
     id: "pr-crisis",
-    title: "【黑紅無預警】嚴重公關危機畢業",
+    title: "【黑紅無預警】嚴重公關危機引退",
     description:
       "炎上值爆表，頻道在深夜無預警關閉。解析文比 VOD 還長，黑歷史切片成為你留下的第二個皮。",
     condition: (s) => s.drama >= 100 || s.peakDrama >= 100,
@@ -58,7 +58,7 @@ export const TITLES: TitleDefinition[] = [
     id: "san-zero",
     title: "【SAN 歸零】精神崩潰的極限發狂人",
     description:
-      "SAN 值歸零了。不是畢業，是被彈幕讀完。待機室還在刷「中之人還好嗎」，下次轉生記得先關麥克風。",
+      "SAN 值歸零了。不是圓滿達成，是被彈幕讀完。待機室還在刷「中之人還好嗎」，下次轉生記得先關麥克風。",
     condition: (s) => s.san <= 0,
   },
   {
@@ -110,7 +110,7 @@ export const TITLES: TitleDefinition[] = [
     id: "flame-legend",
     title: "【全平台圍剿】炎上系傳說",
     description:
-      "解析文比 VOD 還長，你還是撐到了畢業。炎上是修羅場，也是名場面。",
+      "解析文比 VOD 還長，你還是撐到了生涯圓滿。炎上是修羅場，也是名場面。",
     condition: (s) => heatOf(s) >= 90,
   },
   {
@@ -271,7 +271,7 @@ export const TITLES: TitleDefinition[] = [
     id: "late-bloomer",
     title: "【大器晚成】第二年才開始發光",
     description:
-      "前半段默默積累，後半段曲線陡升。有些個人勢的神回，發生在大家以為要畢業的時候。",
+      "前半段默默積累，後半段曲線陡升。有些個人勢的神回，發生在大家以為要退場的時候。",
     condition: (s) =>
       s.months >= 24 && reachOf(s) >= 5_000 && reachOf(s) < 20_000,
   },
@@ -351,9 +351,9 @@ export const TITLES: TitleDefinition[] = [
   },
   {
     id: "peaceful-grad",
-    title: "【平安畢業】溫馨佛系同好",
+    title: "【生涯圓滿】溫馨佛系同好",
     description:
-      "不追求爆量人氣，平安順利地走完了這段 VTuber 生涯。謝謝每一則 Super Chat 與每一次「草」。",
+      "不追求爆量人氣，圓滿達成這段 VTuber 生涯。謝謝每一則 Super Chat 與每一次「草」。",
     condition: () => true,
   },
 ];
@@ -363,9 +363,9 @@ export const EXTRA_TITLES = TITLES;
 export function getVTuberTitle(context: TitleContext): VTuberTitle {
   const fallback: TitleDefinition = TITLES[TITLES.length - 1] ?? {
     id: "peaceful-grad",
-    title: "【平安畢業】溫馨佛系同好",
+    title: "【生涯圓滿】溫馨佛系同好",
     description:
-      "不追求爆量人氣，平安順利地走完了這段 VTuber 生涯。謝謝每一則 Super Chat 與每一次「草」。",
+      "不追求爆量人氣，圓滿達成這段 VTuber 生涯。謝謝每一則 Super Chat 與每一次「草」。",
     condition: () => true,
   };
   const match = TITLES.find((entry) => entry.condition(context)) ?? fallback;
@@ -392,7 +392,7 @@ export function getEpilogue(context: TitleContext): string {
   }
 
   if (buffs.includes("3d_debut") || tech >= 80) {
-    return `畢業後 ${name} 沒離開燈光，而是走進棚裡。動捕、綁骨與事故維修成了日常，後來成為小型 3D 團隊的技術總監。新人模型穿模時，第一個被呼叫的名字就是這個。`;
+    return `圓滿達成後 ${name} 沒離開燈光，而是走進棚裡。動捕、綁骨與事故維修成了日常，後來成為小型 3D 團隊的技術總監。新人模型穿模時，第一個被呼叫的名字就是這個。`;
   }
 
   if (
@@ -420,5 +420,5 @@ export function getEpilogue(context: TitleContext): string {
     return `舞台收了，歌聲沒有。${name} 改以數位單曲與小型 Live 繼續唱，偶爾客串可樂月月的歌回當綠葉。粉絲說這才是真正的後日談：麥還在，只是台比較小。`;
   }
 
-  return `${name} 平安走完這段配信人生，把切片、週邊與 Super Chat 紀錄封進硬碟。之後過著普通卻溫柔的日子，偶爾仍會在週年夜打開可樂月月的台，彈幕打一句：前輩，我畢業了。`;
+  return `${name} 圓滿達成這段配信人生，把切片、週邊與 Super Chat 紀錄封進硬碟。之後過著普通卻溫柔的日子，偶爾仍會在週年夜打開可樂月月的台，彈幕打一句：前輩，我圓滿達成了。`;
 }
