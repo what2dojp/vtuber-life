@@ -617,9 +617,6 @@ function CreateScreen({
 }) {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
-      <div className="mb-6">
-        <ColamoonPromoBanner />
-      </div>
       <div className="mx-auto w-full max-w-2xl rounded-3xl border border-purple-300/20 bg-[#251f35]/80 p-8 shadow-[0_0_48px_rgba(244,114,182,0.22)] backdrop-blur">
         <div className="mb-2 flex items-center gap-2 text-pink-300">
           <Radio className="h-4 w-4 animate-pulse" />
@@ -747,10 +744,6 @@ function LiveScreen({
 }) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 md:px-8">
-      <div className="mb-6">
-        <ColamoonPromoBanner />
-      </div>
-
       <header className="mb-6 rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_32px_rgba(244,114,182,0.12)] backdrop-blur">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-[11px] font-black tracking-widest text-white">
@@ -825,6 +818,7 @@ function LiveScreen({
               accent
             />
           </section>
+          <ColamoonPromoBanner />
         </aside>
 
         <section className="relative flex h-auto min-h-[420px] flex-col rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
@@ -1185,33 +1179,21 @@ function CareerChoiceModal({
 
 function ColamoonPromoBanner() {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-amber-300/40 p-5 shadow-[0_0_36px_rgba(202,138,4,0.28)]">
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(105deg, #4c1d95 0%, #6d28d9 38%, #b45309 72%, #fbbf24 100%)",
-        }}
-      />
-      <span className="pointer-events-none absolute top-3 left-6 h-1.5 w-1.5 animate-ping rounded-full bg-amber-100" />
-      <span className="pointer-events-none absolute top-8 right-10 h-2 w-2 animate-pulse rounded-full bg-yellow-200" />
-      <span className="pointer-events-none absolute bottom-4 left-1/4 h-1 w-1 animate-ping rounded-full bg-white delay-150" />
-      <span className="pointer-events-none absolute right-1/3 bottom-6 h-1.5 w-1.5 animate-pulse rounded-full bg-amber-50" />
-      <span className="pointer-events-none absolute top-1/2 left-10 h-1 w-1 animate-ping rounded-full bg-fuchsia-100" />
-
-      <div className="relative z-10 flex flex-col items-center gap-3 text-center">
-        <p className="text-sm font-black tracking-wide text-amber-50 sm:text-base">
-          ✦ 台灣 VTuber 可樂月月 4 週年紀念中！衝刺 10,000 訂閱中 ✦
-        </p>
-        <a
-          href={COLAMOON_YOUTUBE}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center justify-center rounded-full bg-amber-100 px-5 py-2.5 text-sm font-black text-purple-950 shadow-[0_0_20px_rgba(253,230,138,0.65)] transition hover:scale-[1.03] hover:bg-white"
-        >
-          👉 點我前往 YouTube 訂閱可樂月月
-        </a>
-      </div>
+    <section className="rounded-2xl border border-purple-400/30 bg-gradient-to-br from-purple-900/40 to-pink-900/40 p-4">
+      <p className="text-sm font-black tracking-wide text-purple-100">
+        ✦ 可樂月月 4 週年紀念 ✦
+      </p>
+      <p className="mt-2 text-xs leading-5 text-purple-200/80">
+        衝刺 10,000 訂閱中！快來幫月月點個訂閱吧！
+      </p>
+      <a
+        href={COLAMOON_YOUTUBE}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-2 text-xs font-bold text-white transition hover:brightness-110"
+      >
+        👉 點我前往 YouTube
+      </a>
     </section>
   );
 }
