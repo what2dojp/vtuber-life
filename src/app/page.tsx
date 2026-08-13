@@ -195,22 +195,41 @@ function generateSeed(): string {
   return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 }
 
+function shuffleFreshDeck(usedIds: Set<string>, lastId?: string): GameEvent[] {
+  const unused = RANDOM_EVENTS.filter((event) => !usedIds.has(event.id));
+  if (unused.length > 0) {
+    return shuffleArray(unused);
+  }
+
+  usedIds.clear();
+  const pool =
+    lastId != null
+      ? RANDOM_EVENTS.filter((event) => event.id !== lastId)
+      : RANDOM_EVENTS;
+  return shuffleArray(pool.length > 0 ? pool : RANDOM_EVENTS);
+}
+
 function dealFromDeck(
   deckRef: { current: GameEvent[] },
   cursorRef: { current: number },
+  usedIdsRef: { current: Set<string> },
 ): GameEvent {
-  if (cursorRef.current >= deckRef.current.length) {
-    const lastId = deckRef.current[deckRef.current.length - 1]?.id;
-    const pool =
-      lastId != null
-        ? RANDOM_EVENTS.filter((event) => event.id !== lastId)
-        : RANDOM_EVENTS;
-    deckRef.current = shuffleArray(pool.length > 0 ? pool : RANDOM_EVENTS);
+  if (
+    deckRef.current.length === 0 ||
+    cursorRef.current >= deckRef.current.length
+  ) {
+    const lastId =
+      deckRef.current[cursorRef.current - 1]?.id ??
+      deckRef.current[deckRef.current.length - 1]?.id;
+    deckRef.current = shuffleFreshDeck(usedIdsRef.current, lastId);
     cursorRef.current = 0;
   }
 
   const event = deckRef.current[cursorRef.current];
   cursorRef.current += 1;
+  if (event) {
+    usedIdsRef.current.add(event.id);
+  }
   return event ?? RANDOM_EVENTS[0];
 }
 
@@ -478,6 +497,7 @@ export default function Home() {
   const careerSelecting = useRef(false);
   const eventDeckRef = useRef<GameEvent[]>([]);
   const eventCursorRef = useRef(0);
+  const usedEventIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -512,6 +532,7 @@ export default function Home() {
     const nextName = nameInput.trim() || DEFAULT_NAME;
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
+    usedEventIdsRef.current = new Set();
     eventDeckRef.current = shuffleArray(RANDOM_EVENTS);
     eventCursorRef.current = 0;
     setPeakFans(100);
@@ -523,7 +544,7 @@ export default function Home() {
     setHasCollab(false);
     setHasColamoonCollab(false);
     careerSelecting.current = false;
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
     setResolveState(null);
 
     if (talent) {
@@ -678,7 +699,7 @@ export default function Home() {
     }
 
     setCareerPhase(null);
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
   }
 
   function handleCareerSelect(option: CareerOption) {
@@ -719,7 +740,7 @@ export default function Home() {
       return;
     }
 
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
   }
 
   function handleReincarnate() {
@@ -738,6 +759,7 @@ export default function Home() {
     careerSelecting.current = false;
     eventDeckRef.current = [];
     eventCursorRef.current = 0;
+    usedEventIdsRef.current = new Set();
     setNameInput(name || DEFAULT_NAME);
     setSeedInput(seed || DEFAULT_SEED);
   }
