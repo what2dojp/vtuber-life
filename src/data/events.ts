@@ -76,7 +76,7 @@ function opt(
   });
 }
 
-export const RANDOM_EVENTS: GameEvent[] = [
+const RAW_EVENTS: GameEvent[] = [
   {
     id: "colamoon_collab",
     title: "【大先輩連動】四週年特別企劃！與「可樂月月」合作直播！",
@@ -1517,7 +1517,9 @@ export const RANDOM_EVENTS: GameEvent[] = [
       opt("meme", 60, "把所有相似皮拉進合照，開「克隆人家族聚會」。", { log: "克隆人聚會成為 VR 名場面，世界觀直接擴張！", fans: 7000, talk: 8, drama: 12 }, { log: "人太多當機，連動提早結束……", fans: 500, san: -12 }),
     ],
   },
-].map((event) => ({
+];
+
+export const RANDOM_EVENTS: GameEvent[] = RAW_EVENTS.map((event) => ({
   ...event,
   options: event.options.map(balanceSteadyOption),
 }));

@@ -361,8 +361,14 @@ export const TITLES: TitleDefinition[] = [
 export const EXTRA_TITLES = TITLES;
 
 export function getVTuberTitle(context: TitleContext): VTuberTitle {
-  const match =
-    TITLES.find((entry) => entry.condition(context)) ?? TITLES[TITLES.length - 1];
+  const fallback: TitleDefinition = TITLES[TITLES.length - 1] ?? {
+    id: "peaceful-grad",
+    title: "【平安畢業】溫馨佛系同好",
+    description:
+      "不追求爆量人氣，平安順利地走完了這段 VTuber 生涯。謝謝每一則 Super Chat 與每一次「草」。",
+    condition: () => true,
+  };
+  const match = TITLES.find((entry) => entry.condition(context)) ?? fallback;
 
   return {
     id: match.id,
