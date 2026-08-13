@@ -835,6 +835,9 @@ export default function Home() {
           isColaMoonPartner={
             hasColamoonCollab || careerBuffs.includes("agency_indie_group")
           }
+          talent={
+            careerBuffs.find((id) => id.startsWith("talent_"))?.slice(7) ?? null
+          }
           topSkill={topSkill}
           downloading={downloading}
           copied={copied}
@@ -1315,6 +1318,7 @@ function GraduationScreen({
   hasCollab,
   hasColamoonCollab,
   isColaMoonPartner,
+  talent,
   topSkill,
   downloading,
   copied,
@@ -1336,6 +1340,7 @@ function GraduationScreen({
   hasCollab: boolean;
   hasColamoonCollab: boolean;
   isColaMoonPartner: boolean;
+  talent: string | null;
   topSkill: { label: string; value: number };
   downloading: boolean;
   copied: boolean;
@@ -1357,6 +1362,7 @@ function GraduationScreen({
     hasCollab,
     hasColamoonCollab,
     isColaMoonPartner,
+    talent,
   });
   const title = result.title;
   const fandomTitle = result.title;
