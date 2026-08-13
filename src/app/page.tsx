@@ -13,7 +13,12 @@ import {
   Tv,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import LiveChat, { buildChatBurst, type ChatBurst } from "@/components/LiveChat";
+import LiveChat, {
+  buildChatBurst,
+  FullScreenDanmaku,
+  shouldTriggerDanmaku,
+  type ChatBurst,
+} from "@/components/LiveChat";
 import {
   CAREER_CHOICES,
   type CareerChoicePhase,
@@ -26,7 +31,7 @@ import {
   type EventSuccess,
   type GameEvent,
 } from "@/data/events";
-import { checkChance, getRandomArrayItem } from "@/lib/prng";
+import { checkChance, shuffleArray } from "@/lib/prng";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
 type EventOutcome = EventSuccess | EventFailure;
@@ -133,12 +138,47 @@ function generateSeed(): string {
   return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 }
 
-function pickMonthlyEvent(excludeId?: string): GameEvent {
-  const pool =
-    excludeId != null
-      ? RANDOM_EVENTS.filter((event) => event.id !== excludeId)
-      : RANDOM_EVENTS;
-  return getRandomArrayItem(pool.length > 0 ? pool : RANDOM_EVENTS);
+function dealFromDeck(
+  deckRef: { current: GameEvent[] },
+  cursorRef: { current: number },
+): GameEvent {
+  if (cursorRef.current >= deckRef.current.length) {
+    const lastId = deckRef.current[deckRef.current.length - 1]?.id;
+    const pool =
+      lastId != null
+        ? RANDOM_EVENTS.filter((event) => event.id !== lastId)
+        : RANDOM_EVENTS;
+    deckRef.current = shuffleArray(pool.length > 0 ? pool : RANDOM_EVENTS);
+    cursorRef.current = 0;
+  }
+
+  const event = deckRef.current[cursorRef.current];
+  cursorRef.current += 1;
+  return event ?? RANDOM_EVENTS[0];
+}
+
+function splitBracketText(text: string): { badge: string; body: string } {
+  const match = /^【(.+?)】(.*)$/.exec(text);
+  return {
+    badge: match?.[1]?.trim() ?? "EVENT",
+    body: (match?.[2] ?? text).trim(),
+  };
+}
+
+function optionTagClass(tag: string): string {
+  if (tag.includes("豪賭")) {
+    return "bg-orange-500/20 text-orange-200";
+  }
+  if (tag.includes("迷因")) {
+    return "bg-pink-500/20 text-pink-200";
+  }
+  if (tag.includes("穩健")) {
+    return "bg-emerald-500/20 text-emerald-200";
+  }
+  if (tag.includes("大聲宣傳")) {
+    return "bg-amber-400/20 text-amber-100";
+  }
+  return "bg-purple-500/20 text-purple-200";
 }
 
 function outcomeDeltas(outcome: EventOutcome): StatDelta {
@@ -266,7 +306,10 @@ export default function Home() {
     null,
   );
   const [careerBuffs, setCareerBuffs] = useState<string[]>([]);
+  const [danmakuTrigger, setDanmakuTrigger] = useState<number | null>(null);
   const careerSelecting = useRef(false);
+  const eventDeckRef = useRef<GameEvent[]>([]);
+  const eventCursorRef = useRef(0);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -301,13 +344,16 @@ export default function Home() {
     const nextName = nameInput.trim() || DEFAULT_NAME;
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
+    eventDeckRef.current = shuffleArray(RANDOM_EVENTS);
+    eventCursorRef.current = 0;
     setPeakFans(100);
     setPeakDrama(0);
     setChatBurst(null);
+    setDanmakuTrigger(null);
     setCareerPhase(null);
     setCareerBuffs([]);
     careerSelecting.current = false;
-    setCurrentEvent(pickMonthlyEvent());
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
     setResolveState(null);
   }
 
@@ -342,6 +388,10 @@ export default function Home() {
       lines: buildChatBurst(option.label, success, nextFans),
     });
 
+    if (shouldTriggerDanmaku(option.label, success)) {
+      setDanmakuTrigger(Date.now());
+    }
+
     setResolveState({
       success,
       log: outcome.log,
@@ -350,7 +400,6 @@ export default function Home() {
   }
 
   function handleNextMonth() {
-    const previousId = currentEvent?.id;
     nextMonth();
     setResolveState(null);
 
@@ -373,7 +422,7 @@ export default function Home() {
     }
 
     setCareerPhase(null);
-    setCurrentEvent(pickMonthlyEvent(previousId));
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
   }
 
   function handleCareerSelect(option: CareerOption) {
@@ -410,7 +459,7 @@ export default function Home() {
       return;
     }
 
-    setCurrentEvent(pickMonthlyEvent());
+    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef));
   }
 
   function handleReincarnate() {
@@ -421,9 +470,12 @@ export default function Home() {
     setPeakFans(100);
     setPeakDrama(0);
     setChatBurst(null);
+    setDanmakuTrigger(null);
     setCareerPhase(null);
     setCareerBuffs([]);
     careerSelecting.current = false;
+    eventDeckRef.current = [];
+    eventCursorRef.current = 0;
     setNameInput(name || DEFAULT_NAME);
     setSeedInput(seed || DEFAULT_SEED);
   }
@@ -516,6 +568,7 @@ export default function Home() {
           careerPhase={careerPhase}
         />
       )}
+      <FullScreenDanmaku trigger={danmakuTrigger} />
     </div>
   );
 }
@@ -762,37 +815,50 @@ function LiveScreen({
             </div>
           ) : currentEvent ? (
             <>
-              <div className="shrink-0">
-                <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-pink-300">
-                  EVENT STREAM
-                </p>
-                <h2 className="text-2xl font-bold text-purple-100 md:text-3xl">
-                  {currentEvent.title}
-                </h2>
-              </div>
-              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-thin">
-                <p className="whitespace-pre-line text-base leading-relaxed text-purple-100/90 md:text-lg">
-                  {currentEvent.description}
-                </p>
-                <div className="mt-6 flex flex-col gap-3 pb-2">
-                  {currentEvent.options.map((option) => (
-                    <button
-                      key={option.label}
-                      type="button"
-                      disabled={resolveState != null}
-                      onClick={() => onOption(option)}
-                      className="rounded-xl border border-purple-300/20 bg-[#1a1625]/80 p-4 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40 md:p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="text-base font-semibold text-purple-100">
-                          {option.label}
+              {(() => {
+                const heading = splitBracketText(currentEvent.title);
+                return (
+                  <div className="mb-6 shrink-0 rounded-2xl border border-purple-300/20 bg-[#1a1625]/70 p-4">
+                    <span className="inline-flex rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1 text-[11px] font-black tracking-widest text-white">
+                      {heading.badge}
+                    </span>
+                    <h2 className="mt-3 text-2xl font-bold leading-snug text-purple-100 md:text-3xl">
+                      {heading.body || currentEvent.title}
+                    </h2>
+                  </div>
+                );
+              })()}
+              <div className="min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-thin">
+                <div className="rounded-2xl bg-[#1a1625]/60 p-6">
+                  <p className="whitespace-pre-line text-lg leading-relaxed text-purple-100/90">
+                    {currentEvent.description}
+                  </p>
+                </div>
+                <div className="mt-6 grid grid-cols-1 gap-4 pb-2">
+                  {currentEvent.options.map((option) => {
+                    const parsed = splitBracketText(option.label);
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        disabled={resolveState != null}
+                        onClick={() => onOption(option)}
+                        className="rounded-2xl border border-purple-300/20 bg-[#1a1625]/80 p-5 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black tracking-wide ${optionTagClass(parsed.badge)}`}
+                        >
+                          {parsed.badge}
                         </span>
-                        <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 font-mono text-[11px] text-purple-200">
-                          {option.chance}%
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                        <p className="mt-2 text-base font-semibold leading-relaxed text-purple-100">
+                          {parsed.body || option.label}
+                        </p>
+                        <p className="mt-3 text-sm font-medium text-purple-300/70">
+                          {option.chance}% 成功率
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </>

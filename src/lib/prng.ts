@@ -35,3 +35,16 @@ export function getRandomArrayItem<T>(array: T[]): T {
 
   return array[getRandomInt(0, array.length - 1)];
 }
+
+export function shuffleArray<T>(array: T[]): T[] {
+  const next = [...array];
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = getRandomInt(0, index);
+    const current = next[index];
+    next[index] = next[swapIndex];
+    next[swapIndex] = current;
+  }
+
+  return next;
+}

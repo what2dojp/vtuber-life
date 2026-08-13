@@ -330,3 +330,99 @@ export default function LiveChat({
     </section>
   );
 }
+
+const DANMAKU_TEXTS = [
+  "草草草草草",
+  "7777777",
+  "這真的可以播嗎ｗ",
+  "恭喜萬定！",
+  "神台預定！",
+  "www",
+  "要爆了要爆了",
+  "全押了兄弟們",
+  "這台太抽象了",
+  "888888",
+  "我到底看了什麼",
+  "救命啊ｗｗｗ",
+];
+
+const DANMAKU_COLORS = [
+  "#f472b6",
+  "#e879f9",
+  "#c084fc",
+  "#818cf8",
+  "#67e8f9",
+  "#fbbf24",
+  "#fb7185",
+  "#a78bfa",
+  "#34d399",
+];
+
+interface DanmakuItem {
+  id: string;
+  text: string;
+  top: number;
+  size: number;
+  color: string;
+  duration: number;
+  delay: number;
+  italic: boolean;
+}
+
+export function shouldTriggerDanmaku(label: string, success: boolean): boolean {
+  if (label.includes("迷因")) {
+    return true;
+  }
+  return label.includes("豪賭") && success;
+}
+
+export function FullScreenDanmaku({ trigger }: { trigger: number | null }) {
+  const [items, setItems] = useState<DanmakuItem[]>([]);
+
+  useEffect(() => {
+    if (trigger == null) {
+      return;
+    }
+
+    const spawned: DanmakuItem[] = Array.from({ length: 42 }, (_, index) => ({
+      id: `${trigger}-${index}`,
+      text: DANMAKU_TEXTS[index % DANMAKU_TEXTS.length],
+      top: 4 + Math.random() * 88,
+      size: 22 + Math.floor(Math.random() * 38),
+      color: DANMAKU_COLORS[index % DANMAKU_COLORS.length],
+      duration: 1.55 + Math.random() * 0.85,
+      delay: Math.random() * 0.55,
+      italic: index % 3 !== 0,
+    }));
+
+    setItems(spawned);
+    const timer = window.setTimeout(() => setItems([]), 2500);
+
+    return () => window.clearTimeout(timer);
+  }, [trigger]);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {items.map((item) => (
+        <span
+          key={item.id}
+          className={`absolute left-0 whitespace-nowrap font-black tracking-wide animate-danmaku-fly ${item.italic ? "italic" : ""}`}
+          style={{
+            top: `${item.top}%`,
+            color: item.color,
+            fontSize: `${item.size}px`,
+            animationDuration: `${item.duration}s`,
+            animationDelay: `${item.delay}s`,
+            textShadow: `0 0 10px ${item.color}, 0 0 22px ${item.color}, 0 0 36px ${item.color}88`,
+          }}
+        >
+          {item.text}
+        </span>
+      ))}
+    </div>
+  );
+}

@@ -11,6 +11,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --animate-chat-in: chat-in 0.28s ease-out;
+  --animate-danmaku-fly: danmaku-fly 2.2s linear forwards;
 }
 
 @keyframes chat-in {
@@ -21,6 +22,32 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes danmaku-fly {
+  0% {
+    transform: translateX(110vw);
+    opacity: 0;
+    filter: brightness(1.8);
+  }
+  8% {
+    opacity: 1;
+  }
+  18% {
+    filter: brightness(1.15);
+  }
+  32% {
+    filter: brightness(1.7);
+  }
+  62% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: translateX(-140vw);
+    opacity: 0;
+    filter: brightness(1.9);
   }
 }
 
