@@ -69,44 +69,6 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => s.san <= 10 && reachOf(s) >= 15_000,
   },
   {
-    id: "gold-shield",
-    title: "【金盾級】全平台頂流神級 VTuber",
-    description:
-      "訂閱突破百萬大關！你的名字已經成為 VTuber 史上抹不掉的傳奇標誌！",
-    condition: (s) => reachOf(s) >= 1_000_000,
-  },
-  {
-    id: "song-ceiling",
-    title: "【歌藝天花板】靈魂派絕世歌姬",
-    description:
-      "歌力壓倒性突破！每一次歌回都讓全平台起雞皮疙瘩，聽哭無數人。",
-    condition: (s) =>
-      s.singing >= 85 && isHighestSkill(s.singing, s.talk, s.singing, s.tech),
-  },
-  {
-    id: "talk-ceiling",
-    title: "【單口相聲家】雜談天花板單口大師",
-    description:
-      "就算完全沒有遊戲畫面，單靠一張嘴就能開 8 小時雜談，把全場笑翻！",
-    condition: (s) =>
-      s.talk >= 85 && isHighestSkill(s.talk, s.talk, s.singing, s.tech),
-  },
-  {
-    id: "tech-ceiling",
-    title: "【個人勢工匠】全能 3D 技術狂魔",
-    description:
-      "模型自己刷、動捕自己寫、場景自己渲染，連官方工作人員都想請教你！",
-    condition: (s) =>
-      s.tech >= 85 && isHighestSkill(s.tech, s.talk, s.singing, s.tech),
-  },
-  {
-    id: "hexagon-god",
-    title: "【三棲六邊形】全能型神級創作者",
-    description:
-      "歌力、雜談、技術力全部爆表！圈內公認毫無死角的全能型王者！",
-    condition: (s) => s.talk >= 70 && s.singing >= 70 && s.tech >= 70,
-  },
-  {
     id: "flame-legend",
     title: "【全平台圍剿】炎上系傳說",
     description:
@@ -121,11 +83,11 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => heatOf(s) >= 80 && reachOf(s) >= 30_000,
   },
   {
-    id: "controversy-beast",
-    title: "【社群核彈】爭議性爆播野獸",
+    id: "gold-shield",
+    title: "【金盾級】全平台頂流神級 VTuber",
     description:
-      "發言總在規範邊緣試探，讓經紀人與觀眾每天都捏一把冷汗！",
-    condition: (s) => heatOf(s) >= 70 && s.san <= 40,
+      "訂閱突破百萬大關！你的名字已經成為 VTuber 史上抹不掉的傳奇標誌！",
+    condition: (s) => reachOf(s) >= 1_000_000,
   },
   {
     id: "silver-shield",
@@ -135,18 +97,14 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => reachOf(s) >= 100_000,
   },
   {
-    id: "drama-queen",
-    title: "【話題女王】黑粉比真愛還多",
+    id: "cola-10k-teammate",
+    title: "【可樂月月萬定隊友】四週年先鋒",
     description:
-      "黑粉、箱推、路人一起把熱度養肥。時間軸比節目表熱鬧，這就是話題的代價與報酬。",
-    condition: (s) => heatOf(s) >= 60 && reachOf(s) >= 30_000,
-  },
-  {
-    id: "gambling-soul",
-    title: "【豪賭體質】全押了兄弟們",
-    description:
-      "每次都選最刺激的那條路。心臟受不了的是觀眾，歷史會記住的是你。",
-    condition: (s) => heatOf(s) >= 40 && s.san <= 50 && reachOf(s) >= 8_000,
+      "成功突破萬定大關！與可樂月月一同登上萬人訂閱的星火之巔！",
+    condition: (s) =>
+      reachOf(s) >= 10_000 &&
+      reachOf(s) < 100_000 &&
+      (s.hasColamoonCollab || s.isColaMoonPartner),
   },
   {
     id: "cola-believer",
@@ -170,32 +128,43 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => s.talent === "mechanic",
   },
   {
-    id: "iron-mind",
-    title: "【鋼鐵心智】不動如山的精神大師",
+    id: "colamoon-partner",
+    title: "【凸待認證】可樂月月萬定衝刺最佳夥伴",
     description:
-      "經歷無數次黑粉攻擊與開台事故，SAN 值依然穩如泰山！",
-    condition: (s) => s.san >= 90 && s.months >= 36,
+      "四週年的麥克風曾遞給你。前輩衝刺萬定的路上，這份凸待與應援會一起被寫進年報。",
+    condition: (s) =>
+      (s.hasColamoonCollab || s.isColaMoonPartner) && reachOf(s) >= 5_000,
   },
   {
-    id: "sleep-king",
-    title: "【睡覺耐久王者】掛機系地下偶像",
+    id: "hexagon-god",
+    title: "【三棲六邊形】全能型神級創作者",
     description:
-      "靠著睡覺掛機與擺爛吸引大批猜拳觀眾，堪稱 VTuber 界的奇蹟躺平大師！",
-    condition: (s) => s.talk < 30 && reachOf(s) >= 10_000,
+      "歌力、雜談、技術力全部爆表！圈內公認毫無死角的全能型王者！",
+    condition: (s) => s.talk >= 70 && s.singing >= 70 && s.tech >= 70,
   },
   {
-    id: "delivery-killer",
-    title: "【外送員殺手】宵夜吃播代言人",
+    id: "song-ceiling",
+    title: "【歌藝天花板】靈魂派絕世歌姬",
     description:
-      "每次忘記關麥都在訂宵夜，你的外送菜單已經成為社群粉絲的熱門跟風聖地。",
-    condition: (s) => s.talk >= 60 && heatOf(s) >= 30,
+      "歌力壓倒性突破！每一次歌回都讓全平台起雞皮疙瘩，聽哭無數人。",
+    condition: (s) =>
+      s.singing >= 85 && isHighestSkill(s.singing, s.talk, s.singing, s.tech),
   },
   {
-    id: "zero-totsu-survivor",
-    title: "【零人凸待倖存者】孤高單口傳奇",
+    id: "talk-ceiling",
+    title: "【單口相聲家】雜談天花板單口大師",
     description:
-      "經歷過最慘烈的零人凸待，如今已經無所畏懼，一個人就是一座舞台！",
-    condition: (s) => s.san >= 50 && s.talk >= 65 && s.months >= 24,
+      "就算完全沒有遊戲畫面，單靠一張嘴就能開 8 小時雜談，把全場笑翻！",
+    condition: (s) =>
+      s.talk >= 90 && s.talk >= s.singing + 15 && s.talk >= s.tech + 15,
+  },
+  {
+    id: "tech-ceiling",
+    title: "【個人勢工匠】全能 3D 技術狂魔",
+    description:
+      "模型自己刷、動捕自己寫、場景自己渲染，連官方工作人員都想請教你！",
+    condition: (s) =>
+      s.tech >= 85 && isHighestSkill(s.tech, s.talk, s.singing, s.tech),
   },
   {
     id: "song-monster",
@@ -229,22 +198,53 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => s.talk >= 60 && s.singing >= 60 && s.tech >= 60,
   },
   {
-    id: "cola-10k-teammate",
-    title: "【可樂月月萬定隊友】四週年先鋒",
+    id: "controversy-beast",
+    title: "【社群核彈】爭議性爆播野獸",
     description:
-      "成功突破萬定大關！與可樂月月一同登上萬人訂閱的星火之巔！",
-    condition: (s) =>
-      reachOf(s) >= 10_000 &&
-      reachOf(s) < 100_000 &&
-      (s.hasColamoonCollab || s.isColaMoonPartner),
+      "發言總在規範邊緣試探，讓經紀人與觀眾每天都捏一把冷汗！",
+    condition: (s) => heatOf(s) >= 70 && s.san <= 40,
   },
   {
-    id: "colamoon-partner",
-    title: "【凸待認證】可樂月月萬定衝刺最佳夥伴",
+    id: "drama-queen",
+    title: "【話題女王】黑粉比真愛還多",
     description:
-      "四週年的麥克風曾遞給你。前輩衝刺萬定的路上，這份凸待與應援會一起被寫進年報。",
-    condition: (s) =>
-      (s.hasColamoonCollab || s.isColaMoonPartner) && reachOf(s) >= 5_000,
+      "黑粉、箱推、路人一起把熱度養肥。時間軸比節目表熱鬧，這就是話題的代價與報酬。",
+    condition: (s) => heatOf(s) >= 60 && reachOf(s) >= 30_000,
+  },
+  {
+    id: "gambling-soul",
+    title: "【豪賭體質】全押了兄弟們",
+    description:
+      "每次都選最刺激的那條路。心臟受不了的是觀眾，歷史會記住的是你。",
+    condition: (s) => heatOf(s) >= 40 && s.san <= 50 && reachOf(s) >= 8_000,
+  },
+  {
+    id: "iron-mind",
+    title: "【鋼鐵心智】不動如山的精神大師",
+    description:
+      "經歷無數次黑粉攻擊與開台事故，SAN 值依然穩如泰山！",
+    condition: (s) => s.san >= 90 && s.months >= 36,
+  },
+  {
+    id: "sleep-king",
+    title: "【睡覺耐久王者】掛機系地下偶像",
+    description:
+      "靠著睡覺掛機與擺爛吸引大批猜拳觀眾，堪稱 VTuber 界的奇蹟躺平大師！",
+    condition: (s) => s.talk < 30 && reachOf(s) >= 10_000,
+  },
+  {
+    id: "delivery-killer",
+    title: "【外送員殺手】宵夜吃播代言人",
+    description:
+      "每次忘記關麥都在訂宵夜，你的外送菜單已經成為社群粉絲的熱門跟風聖地。",
+    condition: (s) => s.talk >= 60 && heatOf(s) >= 30,
+  },
+  {
+    id: "zero-totsu-survivor",
+    title: "【零人凸待倖存者】孤高單口傳奇",
+    description:
+      "經歷過最慘烈的零人凸待，如今已經無所畏懼，一個人就是一座舞台！",
+    condition: (s) => s.san >= 50 && s.talk >= 65 && s.months >= 24,
   },
   {
     id: "spark-heir",
