@@ -31,7 +31,7 @@ import {
   type EventSuccess,
   type GameEvent,
 } from "@/data/events";
-import { checkChance, getRandomInt, shuffleArray } from "@/lib/prng";
+import { checkChance, shuffleArray } from "@/lib/prng";
 import { getVTuberTitle } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
@@ -266,6 +266,14 @@ function hasHighSkillBonus(
   return correspondingSkill(option, stats) > 50;
 }
 
+function isGamblingOption(option: EventOption): boolean {
+  return option.type === "gambling" || option.label.includes("豪賭");
+}
+
+function isMemeOption(option: EventOption): boolean {
+  return option.type === "meme" || option.label.includes("迷因");
+}
+
 function getEffectiveChance(
   option: EventOption,
   stats: Pick<PlayerStats, "talk" | "singing" | "tech">,
@@ -284,16 +292,60 @@ function getEffectiveChance(
     chance = Math.min(100, chance + 15);
   }
 
+  if (stats.talk + stats.singing + stats.tech >= 150) {
+    chance = Math.min(100, chance + 10);
+  }
+
   return chance;
 }
 
-function skillPassiveFans(talk: number, singing: number, tech: number): number {
-  const chunks = Math.floor((talk + singing + tech) / 10);
-  if (chunks <= 0) {
-    return 0;
+function monthlyPassiveFans(
+  fans: number,
+  talk: number,
+  singing: number,
+  tech: number,
+): number {
+  return Math.floor(fans * 0.03) + (talk + singing + tech) * 15;
+}
+
+function getDynamicBuffs(stats: {
+  san: number;
+  drama: number;
+  talk: number;
+  singing: number;
+  tech: number;
+}): { id: string; label: string; description: string; tone: string }[] {
+  const buffs: { id: string; label: string; description: string; tone: string }[] =
+    [];
+
+  if (stats.drama >= 60) {
+    buffs.push({
+      id: "drama-burn",
+      label: "🔥 炎上延燒中",
+      description: "每月結算時 SAN -5。風評還在燒，先別再添柴。",
+      tone: "border-orange-400/40 bg-orange-500/10 text-orange-100",
+    });
   }
 
-  return chunks * getRandomInt(100, 200);
+  if (stats.san <= 30) {
+    buffs.push({
+      id: "exhausted",
+      label: "💔 精神耗盡",
+      description: "【豪賭】已禁用。請先選穩健／標準休養。",
+      tone: "border-pink-400/40 bg-pink-500/10 text-pink-100",
+    });
+  }
+
+  if (stats.talk + stats.singing + stats.tech >= 150) {
+    buffs.push({
+      id: "gold-streamer",
+      label: "✨ 金牌主播",
+      description: "三圍達標，所有事件成功率 +10%。",
+      tone: "border-amber-300/40 bg-amber-400/10 text-amber-100",
+    });
+  }
+
+  return buffs;
 }
 
 function formatFans(fans: number): string {
@@ -407,6 +459,10 @@ export default function Home() {
     }
 
     const stats = useGameStore.getState();
+    if (isGamblingOption(option) && stats.san <= 30) {
+      return;
+    }
+
     const chance = getEffectiveChance(option, stats, careerBuffs);
     const success = checkChance(chance);
     const outcome = success ? option.success : option.failure;
@@ -416,6 +472,23 @@ export default function Home() {
       success,
       careerBuffs,
     );
+
+    if (success && isGamblingOption(option) && deltas.fans > 0) {
+      deltas.fans = Math.round(deltas.fans * 1.5);
+    }
+
+    if (!success && isGamblingOption(option)) {
+      if (deltas.san > -25) {
+        deltas.san = -25;
+      }
+      if (deltas.drama < 25) {
+        deltas.drama = 25;
+      }
+    }
+
+    if (success && isMemeOption(option) && deltas.fans > 0) {
+      deltas.fans = Math.round(deltas.fans * 1.25);
+    }
 
     if (success && hasHighSkillBonus(option, stats) && deltas.fans > 0) {
       deltas.fans = Math.round(deltas.fans * 1.3);
@@ -439,7 +512,10 @@ export default function Home() {
       lines: buildChatBurst(option.label, success, nextFans),
     });
 
-    if (shouldTriggerDanmaku(option.label, success)) {
+    if (
+      shouldTriggerDanmaku(option.label, success) ||
+      (success && isGamblingOption(option))
+    ) {
       setDanmakuTrigger(Date.now());
     }
 
@@ -452,14 +528,28 @@ export default function Home() {
 
   function applyMonthlyPassiveIncome() {
     const state = useGameStore.getState();
-    const bonus = skillPassiveFans(state.talk, state.singing, state.tech);
-    if (bonus <= 0) {
+    const bonus = monthlyPassiveFans(
+      state.fans,
+      state.talk,
+      state.singing,
+      state.tech,
+    );
+    const dramaBurn = state.drama >= 60;
+    if (bonus <= 0 && !dramaBurn) {
       return;
     }
 
+    const parts = [
+      bonus > 0 ? `被動成長 +${bonus} 粉絲` : null,
+      dramaBurn ? "炎上延燒 SAN -5" : null,
+    ].filter((part): part is string => part != null);
+
     applyEventResult(
-      { fans: state.fans + bonus },
-      `【第 ${state.month} 個月】能力值被動收益：Talk+Sing+Tech 合計 ${state.talk + state.singing + state.tech}，額外 +${bonus} 粉絲。`,
+      {
+        fans: state.fans + bonus,
+        san: dramaBurn ? state.san - 5 : state.san,
+      },
+      `【第 ${state.month} 個月】${parts.join("，")}。`,
     );
   }
 
@@ -873,6 +963,17 @@ function LiveScreen({
               accent
             />
           </section>
+          {getDynamicBuffs({ san, drama, talk, singing, tech }).map((buff) => (
+            <div
+              key={buff.id}
+              className={`rounded-2xl border p-3.5 ${buff.tone}`}
+            >
+              <p className="text-sm font-black">{buff.label}</p>
+              <p className="mt-1 text-xs leading-5 text-purple-200/80">
+                {buff.description}
+              </p>
+            </div>
+          ))}
           <ColamoonPromoBanner />
         </aside>
 
@@ -916,11 +1017,13 @@ function LiveScreen({
                     careerBuffs,
                   );
                   const boosted = chance > option.chance;
+                  const exhaustedGamble =
+                    san <= 30 && isGamblingOption(option);
                   return (
                     <button
                       key={option.label}
                       type="button"
-                      disabled={resolveState != null}
+                      disabled={resolveState != null || exhaustedGamble}
                       onClick={() => onOption(option)}
                       className="rounded-2xl border border-purple-300/20 bg-[#1a1625]/80 p-3.5 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40 md:p-4"
                     >
@@ -934,12 +1037,14 @@ function LiveScreen({
                           {parsed.body || option.label}
                         </p>
                         <span className="shrink-0 font-mono text-xs font-semibold text-purple-300/80">
-                          {chance}%
-                          {boosted ? " ↑" : ""}
+                          {exhaustedGamble ? "—" : `${chance}%`}
+                          {!exhaustedGamble && boosted ? " ↑" : ""}
                         </span>
                       </div>
                       <p className="mt-2 text-xs leading-5 text-purple-300/70">
-                        {optionEffectHint(option)}
+                        {exhaustedGamble
+                          ? "💔 精神耗盡，需先休養才能豪賭"
+                          : optionEffectHint(option)}
                       </p>
                     </button>
                   );
