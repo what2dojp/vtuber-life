@@ -5,7 +5,6 @@ import {
   Download,
   Flame,
   Heart,
-  MessageSquare,
   Radio,
   RotateCcw,
   Share2,
@@ -14,6 +13,7 @@ import {
   Tv,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import LiveChat, { buildChatBurst, type ChatBurst } from "@/components/LiveChat";
 import {
   CAREER_CHOICES,
   type CareerChoicePhase,
@@ -52,30 +52,6 @@ const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const COLAMOON_PROMO_OPTION =
   "【大聲宣傳】祝賀月月 4 周年快樂！(點擊同時引導開啟頻道)";
 const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
-const CHAT_COLORS = [
-  "#ff7ab2",
-  "#9146ff",
-  "#00d2d3",
-  "#ffb31a",
-  "#57f287",
-  "#f97316",
-  "#38bdf8",
-  "#f472b6",
-];
-const CHAT_USERS = [
-  "待機古參",
-  "箱推A",
-  "clip_職人",
-  "翻譯組請假中",
-  "野うさぎ",
-  "同接73",
-  "PTT鄉民",
-  "巴哈仔",
-  "Holomem誤入",
-  "月月箱推",
-  "不要香菜教",
-  "SAN監視員",
-];
 const INITIAL_STATS = {
   name: DEFAULT_NAME,
   seed: DEFAULT_SEED,
@@ -89,161 +65,6 @@ const INITIAL_STATS = {
   isGraduated: false,
   logs: [] as string[],
 };
-
-interface ChatLine {
-  id: number;
-  user: string;
-  text: string;
-  color: string;
-  badge?: "MOD" | "SUB" | "VIP";
-  highlight?: boolean;
-}
-
-interface ChatBurst {
-  token: number;
-  lines: ChatLine[];
-}
-
-let chatSeq = 0;
-
-function createChatLine(
-  text: string,
-  options?: Pick<ChatLine, "badge" | "highlight" | "user">,
-): ChatLine {
-  chatSeq += 1;
-  return {
-    id: chatSeq,
-    user: options?.user ?? CHAT_USERS[chatSeq % CHAT_USERS.length],
-    text,
-    color: CHAT_COLORS[chatSeq % CHAT_COLORS.length],
-    badge: options?.badge,
-    highlight: options?.highlight,
-  };
-}
-
-function pickChat(texts: string[]): string {
-  return texts[Math.floor(Math.random() * texts.length)] ?? texts[0];
-}
-
-const IDLE_CHAT = [
-  "安安",
-  "草",
-  "www",
-  "稍等一下喔",
-  "麥克風有沒有 OK",
-  "今天也來了",
-  "待機室比正片熱鬧",
-  "ここホロライブ？",
-  "訂了",
-  "草草",
-];
-
-const CHAT_BY_MOOD: Record<string, string[]> = {
-  safe: [
-    "穩",
-    "好好休息",
-    "專業",
-    "這才叫個人勢",
-    "晚安",
-    "今天也辛苦了",
-    "不開太拚的比較好",
-  ],
-  standard: [
-    "草",
-    "名場面",
-    "訂了",
-    "這集可以剪",
-    "待機室見",
-    "www",
-    "經典",
-  ],
-  gamble: [
-    "草草草",
-    "這是在播什麼",
-    "中之人還好嗎",
-    "再一隻就過了",
-    "SAN 值看起來比 HP 低",
-    "這不是直播這是社會事件",
-    "神回預定",
-    "You Died",
-  ],
-  meme: [
-    "草草草",
-    "當代藝術",
-    "這是在播什麼",
-    "抽象",
-    "www 這就是個人勢",
-    "ここホロライブ？",
-    "嘴巴 independently 營業",
-    "不要香菜www",
-  ],
-  promo: [
-    "恭喜萬定！",
-    "月月加油",
-    "四周年快樂——",
-    "訂閱了訂閱了",
-    "先輩凸待草",
-    "衝刺 10000",
-    "台灣 V 加油",
-  ],
-  fail: [
-    "這是在播什麼",
-    "中之人還好嗎",
-    "草草草",
-    "VOD 需要剪",
-    "公關組（你自己）加油",
-    "SAN 歸零倒數",
-    "切片標題已經想好了",
-  ],
-};
-
-function moodFromOption(label: string, success: boolean): keyof typeof CHAT_BY_MOOD {
-  if (label.includes("大聲宣傳") || label.includes("月月")) {
-    return "promo";
-  }
-  if (!success) {
-    return "fail";
-  }
-  if (label.includes("豪賭")) {
-    return "gamble";
-  }
-  if (label.includes("迷因")) {
-    return "meme";
-  }
-  if (label.includes("穩健")) {
-    return "safe";
-  }
-  return "standard";
-}
-
-function buildChatBurst(label: string, success: boolean, fans: number): ChatLine[] {
-  const mood = moodFromOption(label, success);
-  const pool = CHAT_BY_MOOD[mood];
-  const extra: ChatLine[] = [];
-
-  if (success && fans >= 10_000) {
-    extra.push(
-      createChatLine("恭喜萬定！", {
-        badge: "SUB",
-        highlight: true,
-        user: "箱推A",
-      }),
-    );
-  }
-  if (label.includes("豪賭")) {
-    extra.push(
-      createChatLine("草草草", { badge: "VIP", user: "待機古參" }),
-      createChatLine("這是在播什麼", { user: "SAN監視員" }),
-    );
-  }
-  if (label.includes("迷因")) {
-    extra.push(createChatLine("當代藝術＋1", { user: "clip_職人" }));
-  }
-
-  const count = 6 + Math.floor(Math.random() * 4);
-  const lines = Array.from({ length: count }, () => createChatLine(pickChat(pool)));
-  return [...extra, ...lines].slice(0, 12);
-}
 
 function isCollabEvent(event: GameEvent | null): boolean {
   if (!event) {
@@ -305,16 +126,6 @@ function applyCareerBuffsToDeltas(
   }
 
   return next;
-}
-
-function seedIdleChat(): ChatLine[] {
-  return [
-    createChatLine("初配信出道！", { badge: "MOD", user: "待機古參" }),
-    createChatLine("安安", { user: "箱推A" }),
-    createChatLine("稍等一下喔"),
-    createChatLine("麥克風有沒有 OK"),
-    createChatLine("草"),
-  ];
 }
 
 function generateSeed(): string {
@@ -654,11 +465,11 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-full flex-1 text-zinc-100 font-sans"
+      className="min-h-full flex-1 font-sans text-purple-100"
       style={{
-        backgroundColor: "#0e0e10",
+        backgroundColor: "#1a1625",
         backgroundImage:
-          "radial-gradient(ellipse at top, rgba(145,70,255,0.22), transparent 55%), radial-gradient(ellipse at bottom right, rgba(236,72,153,0.14), transparent 50%)",
+          "radial-gradient(ellipse at top, rgba(244,114,182,0.22), transparent 55%), radial-gradient(ellipse at bottom right, rgba(167,139,250,0.18), transparent 50%), radial-gradient(ellipse at left, rgba(253,224,171,0.08), transparent 42%)",
       }}
     >
       {isCreatePhase ? (
@@ -735,44 +546,44 @@ function CreateScreen({
       <div className="mb-6">
         <ColamoonPromoBanner />
       </div>
-      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-fuchsia-400/25 bg-zinc-950/80 p-8 shadow-[0_0_48px_rgba(145,70,255,0.28)] backdrop-blur">
-        <div className="mb-2 flex items-center gap-2 text-fuchsia-300">
+      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-purple-300/20 bg-[#251f35]/80 p-8 shadow-[0_0_48px_rgba(244,114,182,0.22)] backdrop-blur">
+        <div className="mb-2 flex items-center gap-2 text-pink-300">
           <Radio className="h-4 w-4 animate-pulse" />
           <span className="text-xs font-semibold tracking-[0.28em]">
             OFFLINE → WAITING ROOM
           </span>
         </div>
-        <h1 className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-pink-400 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl">
+        <h1 className="bg-gradient-to-r from-pink-300 via-purple-200 to-amber-100 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl">
           V-Life 配信人生模擬器
         </h1>
-        <p className="mt-4 text-sm leading-7 text-zinc-400">
+        <p className="mt-4 text-sm leading-7 text-purple-300/70">
           36 個月、一條種子碼、無數次忘記關麥。這是臺灣與日本 VTuber
           圈的迷因人生——出道、事故、炎上、畢業。準備好按下開始錄製了嗎？
         </p>
 
-        <label className="mt-8 block text-xs font-semibold tracking-wider text-zinc-500">
+        <label className="mt-8 block text-xs font-semibold tracking-wider text-purple-300/70">
           藝名
           <input
             value={nameInput}
             onChange={(event) => onNameChange(event.target.value)}
-            className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-base text-white outline-none ring-fuchsia-400/40 transition focus:border-fuchsia-400/50 focus:ring-2"
+            className="mt-2 w-full rounded-xl border border-purple-300/20 bg-[#1a1625] px-4 py-3 text-base text-purple-100 outline-none ring-pink-400/40 transition focus:border-pink-400/50 focus:ring-2"
             placeholder="請輸入你的 VTuber 藝名"
           />
         </label>
 
-        <label className="mt-5 block text-xs font-semibold tracking-wider text-zinc-500">
+        <label className="mt-5 block text-xs font-semibold tracking-wider text-purple-300/70">
           種子碼 Seed
           <div className="mt-2 flex gap-2">
             <input
               value={seedInput}
               onChange={(event) => onSeedChange(event.target.value)}
-              className="w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 font-mono text-base text-white outline-none ring-fuchsia-400/40 transition focus:border-fuchsia-400/50 focus:ring-2"
+              className="w-full rounded-xl border border-purple-300/20 bg-[#1a1625] px-4 py-3 font-mono text-base text-purple-100 outline-none ring-pink-400/40 transition focus:border-pink-400/50 focus:ring-2"
               placeholder={DEFAULT_SEED}
             />
             <button
               type="button"
               onClick={onRandomSeed}
-              className="shrink-0 rounded-xl border border-violet-400/40 bg-violet-500/15 px-4 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/25"
+              className="shrink-0 rounded-xl border border-purple-300/30 bg-purple-500/15 px-4 text-sm font-semibold text-purple-100 transition hover:bg-purple-500/25"
             >
               隨機 Seed
             </button>
@@ -780,7 +591,7 @@ function CreateScreen({
         </label>
 
         <div className="mt-3">
-          <p className="text-xs font-semibold tracking-wider text-zinc-500">
+          <p className="text-xs font-semibold tracking-wider text-purple-300/70">
             熱門迷因 Seed
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -793,8 +604,8 @@ function CreateScreen({
                   onClick={() => onSeedChange(memeSeed)}
                   className={`rounded-full px-3 py-1.5 font-mono text-xs font-semibold transition ${
                     active
-                      ? "bg-fuchsia-500 text-white shadow-[0_0_16px_rgba(217,70,239,0.45)]"
-                      : "border border-white/15 bg-zinc-900 text-zinc-300 hover:border-fuchsia-400/50 hover:text-white"
+                      ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-[0_0_16px_rgba(236,72,153,0.45)]"
+                      : "border border-purple-300/20 bg-[#1a1625] text-purple-200 hover:border-pink-400/50 hover:text-purple-50"
                   }`}
                 >
                   {memeSeed}
@@ -807,7 +618,7 @@ function CreateScreen({
         <button
           type="button"
           onClick={onDebut}
-          className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 px-6 py-4 text-lg font-black tracking-wide text-white shadow-[0_0_28px_rgba(217,70,239,0.45)] transition hover:brightness-110"
+          className="mt-8 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-pink-500 to-purple-500 px-6 py-4 text-lg font-black tracking-wide text-white shadow-[0_0_28px_rgba(236,72,153,0.4)] transition hover:brightness-110"
         >
           <Sparkles className="h-5 w-5" />
           初配信出道！
@@ -866,47 +677,47 @@ function LiveScreen({
         <ColamoonPromoBanner />
       </div>
 
-      <header className="mb-6 rounded-2xl border border-white/10 bg-zinc-950/75 p-6 shadow-[0_0_32px_rgba(145,70,255,0.12)] backdrop-blur">
+      <header className="mb-6 rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_32px_rgba(244,114,182,0.12)] backdrop-blur">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-[11px] font-black tracking-widest text-white">
             <Radio className="h-3.5 w-3.5" />
             LIVE
           </span>
-          <span className="font-mono text-sm text-zinc-500">SEED {seed}</span>
+          <span className="font-mono text-sm text-purple-300/70">SEED {seed}</span>
         </div>
-        <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
+        <h1 className="text-3xl font-black tracking-tight text-purple-100 md:text-4xl">
           {name}
         </h1>
       </header>
 
       <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
-          <p className="text-sm font-medium tracking-wide text-zinc-400">當月進度</p>
-          <p className="mt-3 text-3xl font-black text-white">
+        <section className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6">
+          <p className="text-sm font-medium tracking-wide text-purple-300/70">當月進度</p>
+          <p className="mt-3 text-3xl font-black text-purple-100">
             第 {month} / 36 個月
           </p>
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-zinc-800">
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#1a1625]">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500"
+              className="h-full rounded-full bg-gradient-to-r from-pink-500 to-purple-500"
               style={{ width: `${monthProgress}%` }}
             />
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
-          <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-zinc-400">
-            <Tv className="h-4 w-4 text-fuchsia-300" />
+        <section className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6">
+          <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-purple-300/70">
+            <Tv className="h-4 w-4 text-pink-300" />
             訂閱數 Fans
           </p>
-          <p className="mt-3 inline-flex items-center gap-2 text-3xl font-black text-fuchsia-100">
-            <Sparkles className="h-6 w-6 text-amber-300" />
+          <p className="mt-3 inline-flex items-center gap-2 text-3xl font-black text-purple-100">
+            <Sparkles className="h-6 w-6 text-pink-300" />
             {formatFans(fans)}
           </p>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
+        <section className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6">
           <div className="flex items-center justify-between">
-            <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-zinc-400">
+            <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-purple-300/70">
               <Heart className="h-4 w-4 text-pink-400" />
               精神值 SAN
             </p>
@@ -917,7 +728,7 @@ function LiveScreen({
             </span>
           </div>
           <div
-            className={`mt-4 h-3 overflow-hidden rounded-full bg-zinc-800 ${sanTone.blink ? "animate-pulse ring-2 ring-red-500/70" : ""}`}
+            className={`mt-4 h-3 overflow-hidden rounded-full bg-[#1a1625] ${sanTone.blink ? "animate-pulse ring-2 ring-red-500/70" : ""}`}
           >
             <div
               className={`h-full rounded-full ${sanTone.fill} ${sanTone.blink ? "animate-pulse" : ""}`}
@@ -927,7 +738,7 @@ function LiveScreen({
         </section>
       </div>
 
-      <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         <aside className="flex flex-col gap-6 lg:col-span-3">
           <section className="grid grid-cols-2 gap-4">
             <StatCard label="雜談力 Talk" value={talk} />
@@ -942,64 +753,68 @@ function LiveScreen({
           </section>
         </aside>
 
-        <section className="relative rounded-2xl border border-fuchsia-400/20 bg-zinc-950/75 p-6 shadow-[0_0_36px_rgba(217,70,239,0.12)] lg:col-span-6">
+        <section className="relative flex h-[540px] flex-col overflow-hidden rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
           {careerPhase ? (
-            <div className="flex min-h-64 flex-col justify-center text-center">
-              <p className="text-[11px] font-semibold tracking-[0.25em] text-amber-300">
+            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto pr-2 text-center scrollbar-thin">
+              <p className="text-[11px] font-semibold tracking-[0.25em] text-pink-300">
                 CAREER CHOICE
               </p>
-              <h2 className="mt-3 text-2xl font-black text-white">
+              <h2 className="mt-3 text-2xl font-black text-purple-100">
                 人生重大抉擇進行中
               </h2>
-              <p className="mt-3 text-sm text-zinc-400">
+              <p className="mt-3 text-sm text-purple-300/70">
                 請在中央面板選擇你的職涯路線。本月暫停隨機事件。
               </p>
             </div>
           ) : currentEvent ? (
             <>
-              <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-fuchsia-300">
-                EVENT STREAM
-              </p>
-              <h2 className="text-2xl font-black text-white">
-                {currentEvent.title}
-              </h2>
-              <p className="mt-4 whitespace-pre-line text-sm leading-8 text-zinc-300">
-                {currentEvent.description}
-              </p>
-              <div className="mt-8 flex flex-col gap-3">
-                {currentEvent.options.map((option) => (
-                  <button
-                    key={option.label}
-                    type="button"
-                    disabled={resolveState != null}
-                    onClick={() => onOption(option)}
-                    className="rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-4 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="text-sm font-semibold text-zinc-100">
-                        {option.label}
-                      </span>
-                      <span className="shrink-0 rounded-full bg-violet-500/20 px-2 py-0.5 font-mono text-[11px] text-violet-200">
-                        {option.chance}%
-                      </span>
-                    </div>
-                  </button>
-                ))}
+              <div className="shrink-0">
+                <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-pink-300">
+                  EVENT STREAM
+                </p>
+                <h2 className="text-2xl font-black text-purple-100">
+                  {currentEvent.title}
+                </h2>
+              </div>
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-thin">
+                <p className="whitespace-pre-line text-sm leading-8 text-purple-100/90">
+                  {currentEvent.description}
+                </p>
+                <div className="mt-6 flex flex-col gap-3 pb-2">
+                  {currentEvent.options.map((option) => (
+                    <button
+                      key={option.label}
+                      type="button"
+                      disabled={resolveState != null}
+                      onClick={() => onOption(option)}
+                      className="rounded-xl border border-purple-300/20 bg-[#1a1625]/80 px-4 py-4 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-sm font-semibold text-purple-100">
+                          {option.label}
+                        </span>
+                        <span className="shrink-0 rounded-full bg-purple-500/20 px-2 py-0.5 font-mono text-[11px] text-purple-200">
+                          {option.chance}%
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           ) : (
-            <p className="text-zinc-400">正在準備本月企劃……</p>
+            <p className="text-purple-300/70">正在準備本月企劃……</p>
           )}
 
           {resolveState && !careerPhase ? (
-            <div className="absolute inset-0 flex items-end justify-center rounded-2xl bg-black/70 p-5 backdrop-blur-sm sm:items-center">
-              <div className="w-full max-w-md rounded-2xl border border-fuchsia-400/30 bg-zinc-950 p-5 shadow-[0_0_32px_rgba(145,70,255,0.35)]">
+            <div className="absolute inset-0 flex items-end justify-center rounded-2xl bg-[#1a1625]/80 p-5 backdrop-blur-sm sm:items-center">
+              <div className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl border border-purple-300/20 bg-[#251f35] p-5 shadow-[0_0_32px_rgba(244,114,182,0.28)] scrollbar-thin">
                 <p
                   className={`text-xs font-black tracking-[0.3em] ${resolveState.success ? "text-emerald-300" : "text-red-400"}`}
                 >
                   {resolveState.success ? "SUCCESS" : "FAILURE"}
                 </p>
-                <p className="mt-3 text-sm leading-7 text-zinc-200">
+                <p className="mt-3 text-sm leading-7 text-purple-100">
                   {resolveState.log}
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -1013,7 +828,7 @@ function LiveScreen({
                 <button
                   type="button"
                   onClick={onNextMonth}
-                  className="mt-5 w-full rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 py-3 text-sm font-bold text-white"
+                  className="mt-5 w-full rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 py-3 text-sm font-bold text-white transition hover:brightness-110"
                 >
                   {isGraduated
                     ? "查看生涯畢業報告"
@@ -1024,13 +839,13 @@ function LiveScreen({
           ) : null}
         </section>
 
-        <aside className="flex min-h-[28rem] flex-col gap-6 lg:col-span-3">
-          <ChatRoom burst={chatBurst} />
-          <div className="flex max-h-[42vh] min-h-[12rem] flex-1 flex-col rounded-2xl border border-white/10 bg-zinc-950/70 p-6 lg:max-h-none">
-            <h2 className="mb-3 text-sm font-bold tracking-wide text-zinc-300">
+        <aside className="flex h-[540px] flex-col gap-4 lg:col-span-3">
+          <LiveChat burst={chatBurst} className="h-[200px] shrink-0" />
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6">
+            <h2 className="mb-3 shrink-0 text-sm font-bold tracking-wide text-purple-100">
               Career Logs
             </h2>
-            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+            <div className="h-full min-h-0 space-y-3 overflow-y-auto pr-2 scrollbar-thin">
               {logs.map((log, index) => {
                 const match = /^【(.+?)】(.*)$/.exec(log);
                 const tag = match?.[1] ?? "LOG";
@@ -1038,12 +853,12 @@ function LiveScreen({
                 return (
                   <article
                     key={`${index}-${log}`}
-                    className="rounded-xl border-l-2 border-fuchsia-400/70 bg-zinc-900/80 px-3 py-2"
+                    className="rounded-xl border-l-2 border-pink-400/70 bg-[#1a1625]/80 px-3 py-2"
                   >
-                    <p className="font-mono text-[10px] tracking-wider text-fuchsia-300">
+                    <p className="font-mono text-[10px] tracking-wider text-pink-300">
                       {tag}
                     </p>
-                    <p className="mt-1 text-xs leading-6 text-zinc-300">{text}</p>
+                    <p className="mt-1 text-xs leading-6 text-purple-300/70">{text}</p>
                   </article>
                 );
               })}
@@ -1187,7 +1002,7 @@ function GraduationScreen({
           type="button"
           onClick={onDownload}
           disabled={downloading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
         >
           <Download className="h-4 w-4" />
           {downloading ? "匯出中…" : "下載生涯報告圖卡"}
@@ -1195,7 +1010,7 @@ function GraduationScreen({
         <button
           type="button"
           onClick={onCopySeed}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-100"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-300/30 bg-purple-500/10 px-4 py-3 text-sm font-bold text-purple-100"
         >
           <Share2 className="h-4 w-4" />
           {copied ? "已複製！" : "複製 Seed 連結"}
@@ -1203,7 +1018,7 @@ function GraduationScreen({
         <button
           type="button"
           onClick={onReincarnate}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-zinc-900 px-4 py-3 text-sm font-bold text-zinc-200"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-purple-300/20 bg-[#251f35] px-4 py-3 text-sm font-bold text-purple-100"
         >
           <RotateCcw className="h-4 w-4" />
           重新轉生
@@ -1222,25 +1037,25 @@ function CareerChoiceModal({
   onSelect: (option: CareerOption) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/80 px-4 py-8 backdrop-blur-sm">
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-[#1a1625]/85 px-4 py-8 backdrop-blur-sm">
       <div
-        className="my-auto w-full max-w-6xl rounded-3xl border-2 p-6 shadow-[0_0_56px_rgba(202,138,4,0.38)] md:p-8"
+        className="my-auto w-full max-w-6xl rounded-3xl border-2 p-6 shadow-[0_0_56px_rgba(244,114,182,0.28)] md:p-8"
         style={{
           background:
-            "linear-gradient(165deg, #1a0828 0%, #16041f 42%, #3b1a08 100%)",
-          borderColor: "#fbbf24",
+            "linear-gradient(165deg, #251f35 0%, #1a1625 42%, #3b2238 100%)",
+          borderColor: "rgba(249,168,212,0.45)",
         }}
       >
-        <p className="text-[11px] font-black tracking-[0.35em] text-amber-200">
+        <p className="text-[11px] font-black tracking-[0.35em] text-pink-300">
           CAREER CHOICE · 人生重大抉擇
         </p>
-        <h2 className="mt-3 text-2xl font-black text-white md:text-3xl">
+        <h2 className="mt-3 text-2xl font-black text-purple-100 md:text-3xl">
           {phase.phaseTitle}
         </h2>
-        <p className="mt-2 text-sm font-semibold text-amber-100/90">
+        <p className="mt-2 text-sm font-semibold text-purple-200/90">
           {phase.subtitle}
         </p>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300">
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-purple-300/70">
           {phase.description}
         </p>
 
@@ -1250,15 +1065,15 @@ function CareerChoiceModal({
               key={option.id}
               type="button"
               onClick={() => onSelect(option)}
-              className="flex h-full flex-col rounded-2xl border border-amber-300/40 bg-zinc-950/70 p-5 text-left transition hover:border-amber-200 hover:bg-violet-950/60 hover:shadow-[0_0_24px_rgba(251,191,36,0.25)]"
+              className="flex h-full flex-col rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-5 text-left transition hover:border-pink-300/50 hover:bg-pink-500/10 hover:shadow-[0_0_24px_rgba(244,114,182,0.2)]"
             >
-              <span className="w-fit rounded-full bg-gradient-to-r from-violet-600 to-amber-500 px-2.5 py-1 text-[11px] font-black text-white">
+              <span className="w-fit rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-2.5 py-1 text-[11px] font-black text-white">
                 {option.tag}
               </span>
-              <h3 className="mt-3 text-lg font-black text-white">
+              <h3 className="mt-3 text-lg font-black text-purple-100">
                 {option.title}
               </h3>
-              <p className="mt-2 flex-1 text-sm leading-6 text-zinc-300">
+              <p className="mt-2 flex-1 text-sm leading-6 text-purple-300/70">
                 {option.description}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1277,84 +1092,6 @@ function CareerChoiceModal({
         </div>
       </div>
     </div>
-  );
-}
-
-function ChatRoom({ burst }: { burst: ChatBurst | null }) {
-  const [lines, setLines] = useState<ChatLine[]>(() => seedIdleChat());
-  const scrollerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setLines((current) =>
-        [...current, createChatLine(pickChat(IDLE_CHAT))].slice(-50),
-      );
-    }, 3200);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!burst) {
-      return;
-    }
-
-    const timers = burst.lines.map((line, index) =>
-      window.setTimeout(() => {
-        setLines((current) => [...current, line].slice(-50));
-      }, index * 70),
-    );
-
-    return () => {
-      for (const timer of timers) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, [burst]);
-
-  useEffect(() => {
-    const node = scrollerRef.current;
-    if (!node) {
-      return;
-    }
-    node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
-  }, [lines]);
-
-  return (
-    <section className="flex h-72 flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0e0e10] lg:h-80">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <p className="inline-flex items-center gap-2 text-sm font-bold text-zinc-200">
-          <MessageSquare className="h-4 w-4 text-fuchsia-300" />
-          Stream Chat
-        </p>
-        <span className="text-[10px] font-semibold tracking-widest text-zinc-500">
-          LIVE
-        </span>
-      </div>
-      <div ref={scrollerRef} className="flex-1 space-y-1.5 overflow-y-auto px-3 py-2">
-        {lines.map((line) => (
-          <p
-            key={line.id}
-            className={`animate-chat-in text-[12px] leading-5 ${line.highlight ? "rounded-md bg-amber-500/15 px-2 py-1" : ""}`}
-          >
-            {line.badge ? (
-              <span className="mr-1 rounded bg-fuchsia-600 px-1 py-px text-[9px] font-black text-white">
-                {line.badge}
-              </span>
-            ) : null}
-            <span className="mr-1.5 font-semibold" style={{ color: line.color }}>
-              {line.user}
-            </span>
-            <span className="text-zinc-200">{line.text}</span>
-          </p>
-        ))}
-      </div>
-      <div className="border-t border-white/10 px-3 py-2">
-        <p className="rounded-lg bg-zinc-900 px-3 py-2 text-[11px] text-zinc-500">
-          發送訊息（觀眾端模擬中）
-        </p>
-      </div>
-    </section>
   );
 }
 
@@ -1404,13 +1141,13 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-6 ${accent ? "border-orange-400/30 bg-orange-500/10" : "border-white/10 bg-zinc-950/70"}`}
+      className={`rounded-2xl border p-6 ${accent ? "border-orange-400/30 bg-orange-500/10" : "border-purple-300/20 bg-[#251f35]/80"}`}
     >
-      <p className="flex items-center gap-1 text-[11px] font-medium text-zinc-400">
+      <p className="flex items-center gap-1 text-[11px] font-medium text-purple-300/70">
         {icon}
         {label}
       </p>
-      <p className="mt-1 font-mono text-2xl font-black text-white">{value}</p>
+      <p className="mt-1 font-mono text-2xl font-black text-purple-100">{value}</p>
     </div>
   );
 }
