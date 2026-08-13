@@ -57,7 +57,7 @@ const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
 
-type TalentId = "singer" | "meme" | "spark";
+type TalentId = "cola" | "sprint" | "mechanic";
 
 const TALENTS: Record<
   TalentId,
@@ -74,41 +74,41 @@ const TALENTS: Record<
     log: string;
   }
 > = {
-  singer: {
-    id: "singer",
-    label: "🎤 歌姬轉生",
-    description: "歌力 +25、技術 +5、粉絲 +300。副歌是你的起跑槍。",
-    fans: 300,
+  cola: {
+    id: "cola",
+    label: "🥤 【可樂神水加護】",
+    description: "歌力 +20、SAN 值上限 +15（開局加算）。",
+    fans: 0,
+    san: 15,
+    talk: 0,
+    singing: 20,
+    tech: 0,
+    drama: 0,
+    log: "天賦【可樂神水加護】覺醒：歌力上升，SAN 上限擴張至 115。",
+  },
+  sprint: {
+    id: "sprint",
+    label: "⚡ 【四週年衝刺者】",
+    description: "初始粉絲 +800、雜談 +15。",
+    fans: 800,
+    san: 0,
+    talk: 15,
+    singing: 0,
+    tech: 0,
+    drama: 0,
+    log: "天賦【四週年衝刺者】覺醒：帶著萬定應援入場，雜談火力全開。",
+  },
+  mechanic: {
+    id: "mechanic",
+    label: "🤖 【模型修復極速手】",
+    description: "技術 +25，炎上值累積降低。",
+    fans: 0,
     san: 0,
     talk: 0,
-    singing: 25,
-    tech: 5,
-    drama: 0,
-    log: "天賦【歌姬轉生】覺醒：歌力大幅提升，歌回成為主線。",
-  },
-  meme: {
-    id: "meme",
-    label: "🤡 迷因怪人",
-    description: "雜談 +18、炎上 +8、粉絲 +200。迷因選項成功率 +20%。",
-    fans: 200,
-    san: 0,
-    talk: 18,
     singing: 0,
-    tech: 0,
-    drama: 8,
-    log: "天賦【迷因怪人】覺醒：抽象體質啟動，迷因選項更容易成功。",
-  },
-  spark: {
-    id: "spark",
-    label: "🌸 可樂月月星火社練習生",
-    description: "粉絲 +500、SAN +10、雜談 +10。開局即與月月箱推結緣。",
-    fans: 500,
-    san: 10,
-    talk: 10,
-    singing: 0,
-    tech: 0,
+    tech: 25,
     drama: 0,
-    log: "天賦【可樂月月星火社練習生】：你帶著四週年應援入場，箱推已經在待機室了。",
+    log: "天賦【模型修復極速手】覺醒：技術力爆棚，炎上累積減半。",
   },
 };
 
@@ -118,6 +118,7 @@ const INITIAL_STATS = {
   month: 1,
   fans: 100,
   san: 100,
+  sanMax: 100,
   talk: 10,
   singing: 10,
   tech: 10,
@@ -357,7 +358,7 @@ function getEffectiveChance(
   let chance = option.chance;
 
   if (
-    (careerBuffs.includes("reincarnation") || careerBuffs.includes("talent_meme")) &&
+    careerBuffs.includes("reincarnation") &&
     (option.type === "meme" || option.label.includes("迷因"))
   ) {
     chance = Math.min(100, chance + 20);
@@ -467,6 +468,7 @@ export default function Home() {
     month,
     fans,
     san,
+    sanMax,
     talk,
     singing,
     tech,
@@ -554,6 +556,7 @@ export default function Home() {
         {
           fans: stats.fans + bonus.fans,
           san: stats.san + bonus.san,
+          sanMax: talent === "cola" ? stats.sanMax + 15 : stats.sanMax,
           talk: stats.talk + bonus.talk,
           singing: stats.singing + bonus.singing,
           tech: stats.tech + bonus.tech,
@@ -563,15 +566,8 @@ export default function Home() {
       );
       setPeakFans(stats.fans + bonus.fans);
       setPeakDrama(stats.drama + bonus.drama);
-
-      if (talent === "meme") {
-        setCareerBuffs(["talent_meme"]);
-      }
-      if (talent === "spark") {
-        setHasCollab(true);
-        setHasColamoonCollab(true);
-        setCareerBuffs(["talent_spark"]);
-      }
+      setHasColamoonCollab(true);
+      setCareerBuffs([`talent_${talent}`]);
     }
   }
 
@@ -614,6 +610,10 @@ export default function Home() {
 
     if (success && hasHighSkillBonus(option, stats) && deltas.fans > 0) {
       deltas.fans = Math.round(deltas.fans * 1.3);
+    }
+
+    if (careerBuffs.includes("talent_mechanic") && deltas.drama > 0) {
+      deltas.drama = Math.round(deltas.drama * 0.5);
     }
 
     applyEventResult(
@@ -687,7 +687,9 @@ export default function Home() {
     }
 
     if (careerBuffs.includes("keep_indie")) {
-      useGameStore.setState({ san: Math.min(100, state.san + 5) });
+      useGameStore.setState({
+        san: Math.min(state.sanMax, state.san + 5),
+      });
     }
 
     const arrived = useGameStore.getState().month;
@@ -718,6 +720,10 @@ export default function Home() {
       tech: 0,
       drama: option.effects.dramaBoost ?? 0,
     };
+
+    if (careerBuffs.includes("talent_mechanic") && deltas.drama > 0) {
+      deltas.drama = Math.round(deltas.drama * 0.5);
+    }
 
     applyEventResult(toAbsoluteChanges(stats, deltas), option.logText);
     setCareerBuffs((current) =>
@@ -844,6 +850,7 @@ export default function Home() {
           monthProgress={monthProgress}
           fans={fans}
           san={san}
+          sanMax={sanMax}
           sanTone={sanTone}
           talk={talk}
           singing={singing}
@@ -955,7 +962,10 @@ function CreateScreen({
         </div>
 
         <div className="mt-6">
-          <p className="text-xs font-semibold tracking-wider text-purple-300/70">
+          <p className="mx-auto mb-1 inline-flex w-full items-center justify-center rounded-full border border-amber-300/50 bg-gradient-to-r from-purple-600/40 via-pink-500/30 to-amber-400/40 px-3 py-1.5 text-center text-[11px] font-black tracking-[0.18em] text-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.28)]">
+            ✦ 可樂月月四週年特選天賦 ✦
+          </p>
+          <p className="mt-1 text-center text-[11px] font-semibold tracking-wider text-purple-300/70">
             初始天賦（可選）
           </p>
           <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -1014,6 +1024,7 @@ function LiveScreen({
   monthProgress,
   fans,
   san,
+  sanMax,
   sanTone,
   talk,
   singing,
@@ -1036,6 +1047,7 @@ function LiveScreen({
   monthProgress: number;
   fans: number;
   san: number;
+  sanMax: number;
   sanTone: ReturnType<typeof sanBarClass>;
   talk: number;
   singing: number;
@@ -1101,7 +1113,7 @@ function LiveScreen({
             <span
               className={`font-mono text-lg font-bold ${sanTone.label} ${sanTone.blink ? "animate-pulse" : ""}`}
             >
-              {san}/100
+              {san}/{sanMax}
             </span>
           </div>
           <div
@@ -1109,7 +1121,7 @@ function LiveScreen({
           >
             <div
               className={`h-full rounded-full ${sanTone.fill} ${sanTone.blink ? "animate-pulse" : ""}`}
-              style={{ width: `${san}%` }}
+              style={{ width: `${Math.min(100, (san / sanMax) * 100)}%` }}
             />
           </div>
         </section>
@@ -1355,7 +1367,7 @@ function GraduationScreen({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div
         id="export-card"
-        className="rounded-3xl border-2 p-8"
+        className="relative overflow-hidden rounded-3xl border-2 p-8 pb-28"
         style={{
           background:
             "linear-gradient(160deg, #1a0828 0%, #16041f 45%, #2a0b24 100%)",
@@ -1435,6 +1447,59 @@ function GraduationScreen({
           >
             🎉 前往 YouTube 訂閱可樂月月 (衝刺 10,000 訂閱)
           </a>
+        </div>
+
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            right: "20px",
+            bottom: "18px",
+            width: "128px",
+            height: "128px",
+            borderRadius: "9999px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform: "rotate(-16deg)",
+            border: "3px solid #fbbf24",
+            boxShadow:
+              "0 0 0 5px rgba(192,132,252,0.55), 0 0 0 8px rgba(244,114,182,0.28), 0 8px 22px rgba(88,28,135,0.55)",
+            background:
+              "radial-gradient(circle at 32% 28%, rgba(253,230,138,0.42) 0%, rgba(244,114,182,0.38) 38%, rgba(126,34,206,0.92) 72%, rgba(88,28,135,0.96) 100%)",
+          }}
+        >
+          <div
+            style={{
+              width: "108px",
+              height: "108px",
+              borderRadius: "9999px",
+              border: "1.5px dashed rgba(253,230,138,0.85)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              padding: "10px",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: "11px",
+                fontWeight: 900,
+                lineHeight: 1.35,
+                letterSpacing: "0.04em",
+                color: "#fef3c7",
+                textShadow: "0 1px 2px rgba(88,28,135,0.85)",
+              }}
+            >
+              【可樂月月
+              <br />
+              4th 萬定衝刺
+              <br />
+              認證章】
+            </p>
+          </div>
         </div>
       </div>
 

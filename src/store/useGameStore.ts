@@ -9,6 +9,7 @@ export interface PlayerStats {
   month: number;
   fans: number;
   san: number;
+  sanMax: number;
   talk: number;
   singing: number;
   tech: number;
@@ -31,6 +32,7 @@ const INITIAL_STATS: PlayerStats = {
   month: 1,
   fans: 100,
   san: 100,
+  sanMax: 100,
   talk: 10,
   singing: 10,
   tech: 10,
@@ -59,6 +61,7 @@ export const useGameStore = create<GameStore>()((set) => ({
       month: 1,
       fans: 100,
       san: 100,
+      sanMax: 100,
       talk: 10,
       singing: 10,
       tech: 10,
@@ -70,7 +73,8 @@ export const useGameStore = create<GameStore>()((set) => ({
 
   applyEventResult: (changes, logText) => {
     set((state) => {
-      const san = clamp(changes.san ?? state.san, 0, 100);
+      const sanMax = changes.sanMax ?? state.sanMax;
+      const san = clamp(changes.san ?? state.san, 0, sanMax);
       const month = changes.month ?? state.month;
 
       return {
@@ -79,6 +83,7 @@ export const useGameStore = create<GameStore>()((set) => ({
         month,
         fans: atLeastZero(changes.fans ?? state.fans),
         san,
+        sanMax,
         talk: atLeastZero(changes.talk ?? state.talk),
         singing: atLeastZero(changes.singing ?? state.singing),
         tech: atLeastZero(changes.tech ?? state.tech),
