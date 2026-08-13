@@ -197,18 +197,21 @@ function generateSeed(): string {
   return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 }
 
+function cloneEvents(source: GameEvent[] = RANDOM_EVENTS): GameEvent[] {
+  return JSON.parse(JSON.stringify(source)) as GameEvent[];
+}
+
 function shuffleFreshDeck(usedIds: Set<string>, lastId?: string): GameEvent[] {
-  const unused = RANDOM_EVENTS.filter((event) => !usedIds.has(event.id));
+  const cloned = cloneEvents();
+  const unused = cloned.filter((event) => !usedIds.has(event.id));
   if (unused.length > 0) {
     return shuffleArray(unused);
   }
 
   usedIds.clear();
   const pool =
-    lastId != null
-      ? RANDOM_EVENTS.filter((event) => event.id !== lastId)
-      : RANDOM_EVENTS;
-  return shuffleArray(pool.length > 0 ? pool : RANDOM_EVENTS);
+    lastId != null ? cloned.filter((event) => event.id !== lastId) : cloned;
+  return shuffleArray(pool.length > 0 ? pool : cloneEvents());
 }
 
 function dealFromDeck(
@@ -232,7 +235,7 @@ function dealFromDeck(
   if (event) {
     usedIdsRef.current.add(event.id);
   }
-  return event ?? RANDOM_EVENTS[0];
+  return event ?? cloneEvents()[0];
 }
 
 function splitBracketText(text: string): { badge: string; body: string } {
@@ -571,7 +574,7 @@ export default function Home() {
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
     usedEventIdsRef.current = new Set();
-    eventDeckRef.current = shuffleArray(RANDOM_EVENTS);
+    eventDeckRef.current = shuffleArray(cloneEvents());
     eventCursorRef.current = 0;
     setPeakFans(100);
     setPeakDrama(0);
@@ -1435,6 +1438,78 @@ function LiveScreen({
   );
 }
 
+function getAnniversaryBadges(input: {
+  fans: number;
+  peakFans: number;
+  drama: number;
+  peakDrama: number;
+  san: number;
+  months: number;
+  talent: string | null;
+  careerBuffs: string[];
+  hasColamoonCollab: boolean;
+  isColaMoonPartner: boolean;
+}): { emoji: string; label: string }[] {
+  const reach = Math.max(input.fans, input.peakFans);
+  const candidates = [
+    {
+      hit:
+        input.talent === "cola" ||
+        input.hasColamoonCollab ||
+        input.isColaMoonPartner,
+      emoji: "🥤",
+      label: "可樂單推人",
+    },
+    {
+      hit: input.peakDrama >= 85 && input.drama < 100,
+      emoji: "⚖️",
+      label: "懸崖勒馬大師",
+    },
+    {
+      hit: reach >= 10_000,
+      emoji: "🚀",
+      label: "萬定衝刺先鋒",
+    },
+    {
+      hit: input.careerBuffs.includes("3d_debut"),
+      emoji: "🎬",
+      label: "3D 綜藝人",
+    },
+    {
+      hit: input.talent === "sprint",
+      emoji: "⚡",
+      label: "四週年衝刺者",
+    },
+    {
+      hit: input.talent === "mechanic",
+      emoji: "🤖",
+      label: "模型修復職人",
+    },
+    {
+      hit: input.peakDrama >= 100 || input.drama >= 100,
+      emoji: "🔥",
+      label: "黑紅見證人",
+    },
+    {
+      hit: input.san >= 85 && input.months >= 24,
+      emoji: "🧘",
+      label: "鋼鐵心智",
+    },
+    {
+      hit: input.careerBuffs.includes("agency_indie_group"),
+      emoji: "🌸",
+      label: "星火社社員",
+    },
+  ];
+
+  const picked = candidates.filter((item) => item.hit).slice(0, 3);
+  if (picked.length === 0) {
+    picked.push({ hit: true, emoji: "🎂", label: "四週年參與獎" });
+  }
+
+  return picked.map(({ emoji, label }) => ({ emoji, label }));
+}
+
 function GraduationScreen({
   name,
   seed,
@@ -1504,6 +1579,51 @@ function GraduationScreen({
   const fandomTitle = result.title;
   const quote = result.quote;
   const epilogue = getEpilogue(titleContext);
+  const badges = getAnniversaryBadges({
+    fans,
+    peakFans,
+    drama,
+    peakDrama,
+    san,
+    months: careerMonths,
+    talent,
+    careerBuffs,
+    hasColamoonCollab,
+    isColaMoonPartner,
+  });
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      const node = document.getElementById("export-card");
+      if (!(node instanceof HTMLElement)) {
+        return;
+      }
+
+      void toPng(node, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#16041f",
+      })
+        .then((dataUrl) => {
+          if (!cancelled) {
+            setPreviewUrl(dataUrl);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setPreviewFailed(true);
+          }
+        });
+    }, 280);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
@@ -1579,6 +1699,37 @@ function GraduationScreen({
           <p className="mt-2 text-sm leading-7" style={{ color: "#fce7f3" }}>
             {epilogue}
           </p>
+        </div>
+
+        <div className="mt-5">
+          <p
+            className="text-[11px] font-bold tracking-[0.2em]"
+            style={{ color: "#fde68a" }}
+          >
+            ✦ 四週年限時成就 ✦
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {badges.map((badge) => (
+              <span
+                key={badge.label}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  borderRadius: "9999px",
+                  border: "1px solid #fbbf24",
+                  background:
+                    "linear-gradient(90deg, rgba(126,34,206,0.55) 0%, rgba(219,39,119,0.4) 100%)",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                  fontWeight: 800,
+                  color: "#fef3c7",
+                }}
+              >
+                {badge.emoji} {badge.label}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div
@@ -1664,10 +1815,39 @@ function GraduationScreen({
         </div>
       </div>
 
+      {previewUrl ? (
+        <div className="rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-4">
+          <p className="text-xs font-semibold leading-6 text-purple-200/80">
+            📱 手機用戶若無法下載，可直接【長按圖片】儲存至相簿，解決
+            Line／FB 內建瀏覽器阻擋下載的問題。
+          </p>
+          <img
+            src={previewUrl}
+            alt={`${name} 的 VTuber 生涯畢業報告卡`}
+            className="mt-3 w-full rounded-xl border border-purple-300/20"
+          />
+        </div>
+      ) : previewFailed ? (
+        <p className="text-center text-xs text-purple-300/70">
+          預覽圖產生失敗，請改用上方下載按鈕。
+        </p>
+      ) : (
+        <p className="text-center text-xs text-purple-300/70">正在產生可長按儲存的預覽圖……</p>
+      )}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <button
           type="button"
-          onClick={onDownload}
+          onClick={async () => {
+            if (previewUrl) {
+              const link = document.createElement("a");
+              link.download = `${name}-vlife-report.png`;
+              link.href = previewUrl;
+              link.click();
+              return;
+            }
+            onDownload();
+          }}
           disabled={downloading}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
         >
