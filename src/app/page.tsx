@@ -165,20 +165,47 @@ function splitBracketText(text: string): { badge: string; body: string } {
   };
 }
 
-function optionTagClass(tag: string): string {
-  if (tag.includes("豪賭")) {
+function optionTagClass(tag: string, type?: EventOption["type"]): string {
+  if (type === "gambling" || tag.includes("豪賭")) {
     return "bg-orange-500/20 text-orange-200";
   }
-  if (tag.includes("迷因")) {
+  if (type === "meme" || tag.includes("迷因")) {
     return "bg-pink-500/20 text-pink-200";
   }
-  if (tag.includes("穩健")) {
+  if (type === "steady" || tag.includes("穩健")) {
     return "bg-emerald-500/20 text-emerald-200";
   }
   if (tag.includes("大聲宣傳")) {
     return "bg-amber-400/20 text-amber-100";
   }
   return "bg-purple-500/20 text-purple-200";
+}
+
+function optionEffectHint(option: EventOption): string {
+  const risk =
+    option.type === "gambling"
+      ? "高風險高報酬"
+      : option.type === "meme"
+        ? "迷因爆擊"
+        : option.type === "steady"
+          ? "低風險穩健"
+          : "均衡發展";
+  const effects = [
+    option.success.fans ? `Fans ${formatDelta(option.success.fans)}` : null,
+    option.success.san ? `SAN ${formatDelta(option.success.san)}` : null,
+    option.success.talk ? `Talk ${formatDelta(option.success.talk)}` : null,
+    option.success.singing
+      ? `Sing ${formatDelta(option.success.singing)}`
+      : null,
+    option.success.tech ? `Tech ${formatDelta(option.success.tech)}` : null,
+    option.success.drama ? `Drama ${formatDelta(option.success.drama)}` : null,
+  ].filter((part): part is string => part != null);
+
+  if (effects.length === 0) {
+    return risk;
+  }
+
+  return `${risk} · ${effects.slice(0, 3).join(" / ")}`;
 }
 
 function outcomeDeltas(outcome: EventOutcome): StatDelta {
@@ -800,9 +827,9 @@ function LiveScreen({
           </section>
         </aside>
 
-        <section className="relative flex h-[540px] flex-col overflow-hidden rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
+        <section className="relative flex h-auto min-h-[420px] flex-col rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
           {careerPhase ? (
-            <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto pr-2 text-center scrollbar-thin">
+            <div className="flex min-h-[420px] flex-col justify-center text-center">
               <p className="text-[11px] font-semibold tracking-[0.25em] text-pink-300">
                 CAREER CHOICE
               </p>
@@ -818,48 +845,49 @@ function LiveScreen({
               {(() => {
                 const heading = splitBracketText(currentEvent.title);
                 return (
-                  <div className="mb-6 shrink-0 rounded-2xl border border-purple-300/20 bg-[#1a1625]/70 p-4">
-                    <span className="inline-flex rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1 text-[11px] font-black tracking-widest text-white">
+                  <>
+                    <span className="mb-3 inline-flex w-fit rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1 text-[11px] font-black tracking-widest text-white">
                       {heading.badge}
                     </span>
-                    <h2 className="mt-3 text-2xl font-bold leading-snug text-purple-100 md:text-3xl">
+                    <h2 className="mb-3 text-xl font-bold leading-snug text-purple-100 md:text-2xl">
                       {heading.body || currentEvent.title}
                     </h2>
-                  </div>
+                  </>
                 );
               })()}
-              <div className="min-h-0 flex-1 overflow-y-auto pr-2 scrollbar-thin">
-                <div className="rounded-2xl bg-[#1a1625]/60 p-6">
-                  <p className="whitespace-pre-line text-lg leading-relaxed text-purple-100/90">
-                    {currentEvent.description}
-                  </p>
-                </div>
-                <div className="mt-6 grid grid-cols-1 gap-4 pb-2">
-                  {currentEvent.options.map((option) => {
-                    const parsed = splitBracketText(option.label);
-                    return (
-                      <button
-                        key={option.label}
-                        type="button"
-                        disabled={resolveState != null}
-                        onClick={() => onOption(option)}
-                        className="rounded-2xl border border-purple-300/20 bg-[#1a1625]/80 p-5 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-black tracking-wide ${optionTagClass(parsed.badge)}`}
-                        >
-                          {parsed.badge}
-                        </span>
-                        <p className="mt-2 text-base font-semibold leading-relaxed text-purple-100">
+              <p className="mb-5 whitespace-pre-line text-sm leading-relaxed text-purple-200/90 md:text-base">
+                {currentEvent.description}
+              </p>
+              <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2">
+                {currentEvent.options.map((option) => {
+                  const parsed = splitBracketText(option.label);
+                  return (
+                    <button
+                      key={option.label}
+                      type="button"
+                      disabled={resolveState != null}
+                      onClick={() => onOption(option)}
+                      className="rounded-2xl border border-purple-300/20 bg-[#1a1625]/80 p-3.5 text-left transition hover:border-pink-400/50 hover:bg-pink-500/10 disabled:cursor-not-allowed disabled:opacity-40 md:p-4"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 text-sm font-semibold leading-snug text-purple-100">
+                          <span
+                            className={`mr-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-black tracking-wide ${optionTagClass(parsed.badge, option.type)}`}
+                          >
+                            {parsed.badge}
+                          </span>
                           {parsed.body || option.label}
                         </p>
-                        <p className="mt-3 text-sm font-medium text-purple-300/70">
-                          {option.chance}% 成功率
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
+                        <span className="shrink-0 font-mono text-xs font-semibold text-purple-300/80">
+                          {option.chance}%
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-purple-300/70">
+                        {optionEffectHint(option)}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -868,7 +896,7 @@ function LiveScreen({
 
           {resolveState && !careerPhase ? (
             <div className="absolute inset-0 flex items-end justify-center rounded-2xl bg-[#1a1625]/80 p-5 backdrop-blur-sm sm:items-center">
-              <div className="max-h-full w-full max-w-md overflow-y-auto rounded-2xl border border-purple-300/20 bg-[#251f35] p-5 shadow-[0_0_32px_rgba(244,114,182,0.28)] scrollbar-thin">
+              <div className="w-full max-w-md rounded-2xl border border-purple-300/20 bg-[#251f35] p-5 shadow-[0_0_32px_rgba(244,114,182,0.28)]">
                 <p
                   className={`text-xs font-black tracking-[0.3em] ${resolveState.success ? "text-emerald-300" : "text-red-400"}`}
                 >
