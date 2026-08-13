@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  CAREER_CHOICES,
+  type CareerChoicePhase,
+  type CareerOption,
+} from "@/data/careerChoices";
+import {
   RANDOM_EVENTS,
   type EventFailure,
   type EventOption,
@@ -240,6 +245,68 @@ function buildChatBurst(label: string, success: boolean, fans: number): ChatLine
   return [...extra, ...lines].slice(0, 12);
 }
 
+function isCollabEvent(event: GameEvent | null): boolean {
+  if (!event) {
+    return false;
+  }
+
+  return (
+    event.id.includes("collab") ||
+    event.title.includes("連動") ||
+    event.title.includes("凸待")
+  );
+}
+
+function applyCareerBuffsToDeltas(
+  deltas: StatDelta,
+  event: GameEvent | null,
+  success: boolean,
+  buffs: string[],
+): StatDelta {
+  const next = { ...deltas };
+
+  if (buffs.includes("agency_black")) {
+    if (next.fans > 0) {
+      next.fans = Math.round(next.fans * 1.5);
+    }
+    if (next.san < 0) {
+      next.san = Math.round(next.san * 1.3);
+    }
+  }
+
+  if (buffs.includes("agency_indie_group") && isCollabEvent(event)) {
+    next.fans *= 2;
+    next.san *= 2;
+    next.talk *= 2;
+    next.singing *= 2;
+    next.tech *= 2;
+    next.drama *= 2;
+  }
+
+  if (buffs.includes("3d_debut")) {
+    if (next.singing > 0) {
+      next.singing = Math.round(next.singing * 1.5);
+    }
+    if (next.tech > 0) {
+      next.tech = Math.round(next.tech * 1.5);
+    }
+  }
+
+  if (buffs.includes("collab_marathon") && !success) {
+    if (next.fans < 0) {
+      next.fans = Math.round(next.fans / 2);
+    }
+    if (next.san < 0) {
+      next.san = Math.round(next.san / 2);
+    }
+    if (next.drama > 0) {
+      next.drama = Math.round(next.drama / 2);
+    }
+  }
+
+  return next;
+}
+
 function seedIdleChat(): ChatLine[] {
   return [
     createChatLine("初配信出道！", { badge: "MOD", user: "待機古參" }),
@@ -386,6 +453,11 @@ export default function Home() {
   const [chatBurst, setChatBurst] = useState<ChatBurst | null>(null);
   const [peakFans, setPeakFans] = useState(100);
   const [peakDrama, setPeakDrama] = useState(0);
+  const [careerPhase, setCareerPhase] = useState<CareerChoicePhase | null>(
+    null,
+  );
+  const [careerBuffs, setCareerBuffs] = useState<string[]>([]);
+  const careerSelecting = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -423,6 +495,9 @@ export default function Home() {
     setPeakFans(100);
     setPeakDrama(0);
     setChatBurst(null);
+    setCareerPhase(null);
+    setCareerBuffs([]);
+    careerSelecting.current = false;
     setCurrentEvent(pickMonthlyEvent());
     setResolveState(null);
   }
@@ -436,9 +511,19 @@ export default function Home() {
       window.open(COLAMOON_YOUTUBE, "_blank", "noopener,noreferrer");
     }
 
-    const success = checkChance(option.chance);
+    let chance = option.chance;
+    if (careerBuffs.includes("reincarnation") && option.label.includes("迷因")) {
+      chance = Math.min(100, chance + 20);
+    }
+
+    const success = checkChance(chance);
     const outcome = success ? option.success : option.failure;
-    const deltas = outcomeDeltas(outcome);
+    const deltas = applyCareerBuffsToDeltas(
+      outcomeDeltas(outcome),
+      currentEvent,
+      success,
+      careerBuffs,
+    );
     const stats = useGameStore.getState();
 
     applyEventResult(
@@ -464,9 +549,63 @@ export default function Home() {
     nextMonth();
     setResolveState(null);
 
-    if (!useGameStore.getState().isGraduated) {
-      setCurrentEvent(pickMonthlyEvent(previousId));
+    const state = useGameStore.getState();
+    if (state.isGraduated) {
+      setCareerPhase(null);
+      return;
     }
+
+    if (careerBuffs.includes("keep_indie")) {
+      useGameStore.setState({ san: Math.min(100, state.san + 5) });
+    }
+
+    const arrived = useGameStore.getState().month;
+    const phase = CAREER_CHOICES[arrived];
+    if (phase) {
+      setCurrentEvent(null);
+      setCareerPhase(phase);
+      return;
+    }
+
+    setCareerPhase(null);
+    setCurrentEvent(pickMonthlyEvent(previousId));
+  }
+
+  function handleCareerSelect(option: CareerOption) {
+    if (careerPhase == null || careerSelecting.current) {
+      return;
+    }
+
+    careerSelecting.current = true;
+
+    const stats = useGameStore.getState();
+    const deltas: StatDelta = {
+      fans: option.effects.fansBoost ?? 0,
+      san: option.effects.sanBoost ?? 0,
+      talk: 0,
+      singing: 0,
+      tech: 0,
+      drama: option.effects.dramaBoost ?? 0,
+    };
+
+    applyEventResult(toAbsoluteChanges(stats, deltas), option.logText);
+    setCareerBuffs((current) =>
+      current.includes(option.id) ? current : [...current, option.id],
+    );
+    setCareerPhase(null);
+    setChatBurst({
+      token: Date.now(),
+      lines: buildChatBurst(option.tag, true, stats.fans + deltas.fans),
+    });
+
+    nextMonth();
+    const after = useGameStore.getState();
+    careerSelecting.current = false;
+    if (after.isGraduated) {
+      return;
+    }
+
+    setCurrentEvent(pickMonthlyEvent());
   }
 
   function handleReincarnate() {
@@ -477,6 +616,9 @@ export default function Home() {
     setPeakFans(100);
     setPeakDrama(0);
     setChatBurst(null);
+    setCareerPhase(null);
+    setCareerBuffs([]);
+    careerSelecting.current = false;
     setNameInput(name || DEFAULT_NAME);
     setSeedInput(seed || DEFAULT_SEED);
   }
@@ -564,7 +706,9 @@ export default function Home() {
           isGraduated={isGraduated}
           onOption={handleOption}
           onNextMonth={handleNextMonth}
+          onCareerSelect={handleCareerSelect}
           chatBurst={chatBurst}
+          careerPhase={careerPhase}
         />
       )}
     </div>
@@ -691,7 +835,9 @@ function LiveScreen({
   isGraduated,
   onOption,
   onNextMonth,
+  onCareerSelect,
   chatBurst,
+  careerPhase,
 }: {
   name: string;
   seed: string;
@@ -710,7 +856,9 @@ function LiveScreen({
   isGraduated: boolean;
   onOption: (option: EventOption) => void;
   onNextMonth: () => void;
+  onCareerSelect: (option: CareerOption) => void;
   chatBurst: ChatBurst | null;
+  careerPhase: CareerChoicePhase | null;
 }) {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 md:px-8">
@@ -795,7 +943,19 @@ function LiveScreen({
         </aside>
 
         <section className="relative rounded-2xl border border-fuchsia-400/20 bg-zinc-950/75 p-6 shadow-[0_0_36px_rgba(217,70,239,0.12)] lg:col-span-6">
-          {currentEvent ? (
+          {careerPhase ? (
+            <div className="flex min-h-64 flex-col justify-center text-center">
+              <p className="text-[11px] font-semibold tracking-[0.25em] text-amber-300">
+                CAREER CHOICE
+              </p>
+              <h2 className="mt-3 text-2xl font-black text-white">
+                人生重大抉擇進行中
+              </h2>
+              <p className="mt-3 text-sm text-zinc-400">
+                請在中央面板選擇你的職涯路線。本月暫停隨機事件。
+              </p>
+            </div>
+          ) : currentEvent ? (
             <>
               <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-fuchsia-300">
                 EVENT STREAM
@@ -831,7 +991,7 @@ function LiveScreen({
             <p className="text-zinc-400">正在準備本月企劃……</p>
           )}
 
-          {resolveState ? (
+          {resolveState && !careerPhase ? (
             <div className="absolute inset-0 flex items-end justify-center rounded-2xl bg-black/70 p-5 backdrop-blur-sm sm:items-center">
               <div className="w-full max-w-md rounded-2xl border border-fuchsia-400/30 bg-zinc-950 p-5 shadow-[0_0_32px_rgba(145,70,255,0.35)]">
                 <p
@@ -891,6 +1051,10 @@ function LiveScreen({
           </div>
         </aside>
       </div>
+
+      {careerPhase ? (
+        <CareerChoiceModal phase={careerPhase} onSelect={onCareerSelect} />
+      ) : null}
     </div>
   );
 }
@@ -1047,6 +1211,72 @@ function GraduationScreen({
       </div>
       </div>
     </main>
+  );
+}
+
+function CareerChoiceModal({
+  phase,
+  onSelect,
+}: {
+  phase: CareerChoicePhase;
+  onSelect: (option: CareerOption) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/80 px-4 py-8 backdrop-blur-sm">
+      <div
+        className="my-auto w-full max-w-6xl rounded-3xl border-2 p-6 shadow-[0_0_56px_rgba(202,138,4,0.38)] md:p-8"
+        style={{
+          background:
+            "linear-gradient(165deg, #1a0828 0%, #16041f 42%, #3b1a08 100%)",
+          borderColor: "#fbbf24",
+        }}
+      >
+        <p className="text-[11px] font-black tracking-[0.35em] text-amber-200">
+          CAREER CHOICE · 人生重大抉擇
+        </p>
+        <h2 className="mt-3 text-2xl font-black text-white md:text-3xl">
+          {phase.phaseTitle}
+        </h2>
+        <p className="mt-2 text-sm font-semibold text-amber-100/90">
+          {phase.subtitle}
+        </p>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-zinc-300">
+          {phase.description}
+        </p>
+
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {phase.options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => onSelect(option)}
+              className="flex h-full flex-col rounded-2xl border border-amber-300/40 bg-zinc-950/70 p-5 text-left transition hover:border-amber-200 hover:bg-violet-950/60 hover:shadow-[0_0_24px_rgba(251,191,36,0.25)]"
+            >
+              <span className="w-fit rounded-full bg-gradient-to-r from-violet-600 to-amber-500 px-2.5 py-1 text-[11px] font-black text-white">
+                {option.tag}
+              </span>
+              <h3 className="mt-3 text-lg font-black text-white">
+                {option.title}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-6 text-zinc-300">
+                {option.description}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <DeltaChip label="Fans" value={option.effects.fansBoost ?? 0} />
+                <DeltaChip label="SAN" value={option.effects.sanBoost ?? 0} />
+                <DeltaChip
+                  label="Drama"
+                  value={option.effects.dramaBoost ?? 0}
+                />
+              </div>
+              <p className="mt-4 rounded-xl border border-amber-300/20 bg-amber-500/10 px-3 py-2 text-xs leading-6 text-amber-100">
+                {option.effects.passiveBuffDescription}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
