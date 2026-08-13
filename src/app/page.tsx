@@ -40,7 +40,7 @@ interface StatDelta {
   drama: number;
 }
 
-const DEFAULT_NAME = "預設V子";
+const DEFAULT_NAME = "星野可樂";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const COLAMOON_PROMO_OPTION =
@@ -359,9 +359,11 @@ function CreateScreen({
   onDebut: () => void;
 }) {
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-2xl flex-col justify-center gap-5 px-6 py-10">
-      <ColamoonPromoBanner />
-      <div className="rounded-3xl border border-fuchsia-400/25 bg-zinc-950/80 p-8 shadow-[0_0_48px_rgba(145,70,255,0.28)] backdrop-blur">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
+      <div className="mb-6">
+        <ColamoonPromoBanner />
+      </div>
+      <div className="mx-auto w-full max-w-2xl rounded-3xl border border-fuchsia-400/25 bg-zinc-950/80 p-8 shadow-[0_0_48px_rgba(145,70,255,0.28)] backdrop-blur">
         <div className="mb-2 flex items-center gap-2 text-fuchsia-300">
           <Radio className="h-4 w-4 animate-pulse" />
           <span className="text-xs font-semibold tracking-[0.28em]">
@@ -382,7 +384,7 @@ function CreateScreen({
             value={nameInput}
             onChange={(event) => onNameChange(event.target.value)}
             className="mt-2 w-full rounded-xl border border-white/10 bg-zinc-900 px-4 py-3 text-base text-white outline-none ring-fuchsia-400/40 transition focus:border-fuchsia-400/50 focus:ring-2"
-            placeholder={DEFAULT_NAME}
+            placeholder="請輸入你的 VTuber 藝名"
           />
         </label>
 
@@ -456,81 +458,88 @@ function LiveScreen({
   onNextMonth: () => void;
 }) {
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col gap-4 px-4 py-4 lg:px-6">
-      <header className="rounded-2xl border border-white/10 bg-zinc-950/75 px-5 py-4 shadow-[0_0_32px_rgba(145,70,255,0.12)] backdrop-blur">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="mb-1 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-[10px] font-black tracking-widest text-white">
-                <Radio className="h-3 w-3" />
-                LIVE
-              </span>
-              <span className="font-mono text-xs text-zinc-500">SEED {seed}</span>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-white">
-              {name}
-            </h1>
-          </div>
+    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-8 md:px-8">
+      <div className="mb-6">
+        <ColamoonPromoBanner />
+      </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:max-w-xl lg:items-end">
-            <div className="flex w-full items-center justify-between gap-3 text-sm">
-              <span className="text-zinc-400">
-                第 {month} / 36 個月
-              </span>
-              <span className="inline-flex items-center gap-1.5 font-semibold text-fuchsia-200">
-                <Tv className="h-4 w-4" />
-                <Sparkles className="h-4 w-4 text-amber-300" />
-                {formatFans(fans)} 訂閱
-              </span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500"
-                style={{ width: `${monthProgress}%` }}
-              />
-            </div>
-          </div>
+      <header className="mb-6 rounded-2xl border border-white/10 bg-zinc-950/75 p-6 shadow-[0_0_32px_rgba(145,70,255,0.12)] backdrop-blur">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded bg-red-600 px-2 py-1 text-[11px] font-black tracking-widest text-white">
+            <Radio className="h-3.5 w-3.5" />
+            LIVE
+          </span>
+          <span className="font-mono text-sm text-zinc-500">SEED {seed}</span>
         </div>
+        <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
+          {name}
+        </h1>
       </header>
 
-      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)_280px]">
-        <aside className="flex flex-col gap-4">
-          <section className="rounded-2xl border border-white/10 bg-zinc-950/70 p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-zinc-300">
-                <Heart className="h-4 w-4 text-pink-400" />
-                精神值 SAN
-              </span>
-              <span
-                className={`font-mono text-sm font-bold ${sanTone.label} ${sanTone.blink ? "animate-pulse" : ""}`}
-              >
-                {san}/100
-              </span>
-            </div>
+      <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
+          <p className="text-sm font-medium tracking-wide text-zinc-400">當月進度</p>
+          <p className="mt-3 text-3xl font-black text-white">
+            第 {month} / 36 個月
+          </p>
+          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-zinc-800">
             <div
-              className={`h-3 overflow-hidden rounded-full bg-zinc-800 ${sanTone.blink ? "animate-pulse ring-2 ring-red-500/70" : ""}`}
-            >
-              <div
-                className={`h-full rounded-full ${sanTone.fill} ${sanTone.blink ? "animate-pulse" : ""}`}
-                style={{ width: `${san}%` }}
-              />
-            </div>
-          </section>
+              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500"
+              style={{ width: `${monthProgress}%` }}
+            />
+          </div>
+        </section>
 
-          <section className="grid grid-cols-2 gap-3">
+        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
+          <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-zinc-400">
+            <Tv className="h-4 w-4 text-fuchsia-300" />
+            訂閱數 Fans
+          </p>
+          <p className="mt-3 inline-flex items-center gap-2 text-3xl font-black text-fuchsia-100">
+            <Sparkles className="h-6 w-6 text-amber-300" />
+            {formatFans(fans)}
+          </p>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-zinc-950/75 p-6">
+          <div className="flex items-center justify-between">
+            <p className="inline-flex items-center gap-2 text-sm font-medium tracking-wide text-zinc-400">
+              <Heart className="h-4 w-4 text-pink-400" />
+              精神值 SAN
+            </p>
+            <span
+              className={`font-mono text-lg font-bold ${sanTone.label} ${sanTone.blink ? "animate-pulse" : ""}`}
+            >
+              {san}/100
+            </span>
+          </div>
+          <div
+            className={`mt-4 h-3 overflow-hidden rounded-full bg-zinc-800 ${sanTone.blink ? "animate-pulse ring-2 ring-red-500/70" : ""}`}
+          >
+            <div
+              className={`h-full rounded-full ${sanTone.fill} ${sanTone.blink ? "animate-pulse" : ""}`}
+              style={{ width: `${san}%` }}
+            />
+          </div>
+        </section>
+      </div>
+
+      <div className="grid flex-1 grid-cols-1 gap-6 lg:grid-cols-12">
+        <aside className="flex flex-col gap-6 lg:col-span-3">
+          <section className="grid grid-cols-2 gap-4">
             <StatCard label="雜談力 Talk" value={talk} />
             <StatCard label="歌力 Singing" value={singing} />
             <StatCard label="技術力 Tech" value={tech} />
             <StatCard
               label="炎上值 Drama"
               value={drama}
-              icon={<Flame className="h-3.5 w-3.5 text-orange-400" />}
+              icon={<Flame className="h-4 w-4 text-orange-400" />}
               accent
             />
           </section>
         </aside>
 
-        <section className="relative rounded-2xl border border-fuchsia-400/20 bg-zinc-950/75 p-5 shadow-[0_0_36px_rgba(217,70,239,0.12)]">
+        <section className="relative rounded-2xl border border-fuchsia-400/20 bg-zinc-950/75 p-6 shadow-[0_0_36px_rgba(217,70,239,0.12)] lg:col-span-6">
           {currentEvent ? (
             <>
               <p className="mb-2 text-[11px] font-semibold tracking-[0.25em] text-fuchsia-300">
@@ -539,17 +548,17 @@ function LiveScreen({
               <h2 className="text-2xl font-black text-white">
                 {currentEvent.title}
               </h2>
-              <p className="mt-3 text-sm leading-7 text-zinc-300">
+              <p className="mt-4 whitespace-pre-line text-sm leading-8 text-zinc-300">
                 {currentEvent.description}
               </p>
-              <div className="mt-6 flex flex-col gap-3">
+              <div className="mt-8 flex flex-col gap-3">
                 {currentEvent.options.map((option) => (
                   <button
                     key={option.label}
                     type="button"
                     disabled={resolveState != null}
                     onClick={() => onOption(option)}
-                    className="rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-3 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-xl border border-white/10 bg-zinc-900/80 px-4 py-4 text-left transition hover:border-fuchsia-400/50 hover:bg-fuchsia-500/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-sm font-semibold text-zinc-100">
@@ -600,7 +609,7 @@ function LiveScreen({
           ) : null}
         </section>
 
-        <aside className="flex max-h-[70vh] flex-col rounded-2xl border border-white/10 bg-zinc-950/70 p-4 lg:max-h-none">
+        <aside className="flex max-h-[70vh] flex-col rounded-2xl border border-white/10 bg-zinc-950/70 p-6 lg:col-span-3 lg:max-h-none">
           <h2 className="mb-3 text-sm font-bold tracking-wide text-zinc-300">
             Career Logs
           </h2>
@@ -659,7 +668,8 @@ function GraduationScreen({
   const quote = getGraduationQuote(name, fans, drama, san);
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-3xl flex-col justify-center gap-5 px-4 py-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <div
         id="export-card"
         className="rounded-3xl border-2 p-8"
@@ -761,6 +771,7 @@ function GraduationScreen({
           重新轉生
         </button>
       </div>
+      </div>
     </main>
   );
 }
@@ -811,7 +822,7 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border p-3 ${accent ? "border-orange-400/30 bg-orange-500/10" : "border-white/10 bg-zinc-950/70"}`}
+      className={`rounded-2xl border p-6 ${accent ? "border-orange-400/30 bg-orange-500/10" : "border-white/10 bg-zinc-950/70"}`}
     >
       <p className="flex items-center gap-1 text-[11px] font-medium text-zinc-400">
         {icon}
