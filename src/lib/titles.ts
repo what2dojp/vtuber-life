@@ -97,6 +97,16 @@ export const TITLES: TitleDefinition[] = [
     condition: (s) => reachOf(s) >= 100_000,
   },
   {
+    id: "spark-legacy",
+    title: "【星火傳承傳奇】同人火種的下一棒",
+    description:
+      "連動、凸待與萬定應援寫在同一條時間軸。你不是路過的綠葉，是把星火傳下去的那個人。",
+    condition: (s) =>
+      s.hasCollab &&
+      (s.hasColamoonCollab || s.isColaMoonPartner) &&
+      reachOf(s) >= 25_000,
+  },
+  {
     id: "cola-10k-teammate",
     title: "【可樂月月萬定隊友】四週年先鋒",
     description:
@@ -126,6 +136,80 @@ export const TITLES: TitleDefinition[] = [
     description:
       "OBS、綁骨、藍畫面全部自己修。技術力不是後台，是你的第二個角色。",
     condition: (s) => s.talent === "mechanic",
+  },
+  {
+    id: "horn-pioneer",
+    title: "【萬定先鋒號角】前期曲線點燃者",
+    description:
+      "出道前十二個月把成長曲線拉成直線。號角一響，訂閱就知道這台不是來試水溫的。",
+    condition: (s) => s.talent === "horn",
+  },
+  {
+    id: "physics-destroyer",
+    title: "【3D 物理破壞神】骨骼與裙擺的最終boss",
+    description:
+      "物理一開，瀏海穿頭、衣擺飛天。你把事故修成節目，觀眾是來看骨科名場面的。",
+    condition: (s) =>
+      s.tech >= 70 && (s.careerBuffs ?? []).includes("3d_debut"),
+  },
+  {
+    id: "cyber-oracle",
+    title: "【賽博通靈大師】流年與彈幕一起排盤",
+    description:
+      "把命理、參數與聊天室風向當成同一套儀表板。信的人說你準，不信的人還是來求連動。",
+    condition: (s) =>
+      s.talk >= 50 && s.tech >= 35 && s.san >= 60 && s.months >= 18,
+  },
+  {
+    id: "midnight-delivery",
+    title: "【深夜外送代言人】鹽酥雞與待機圖的雙響",
+    description:
+      "門鈴總在開台時響起。你的菜單比節目表可靠，夜貓子已經把取餐當成固定環節。",
+    condition: (s) =>
+      s.talk >= 52 && heatOf(s) >= 22 && s.months >= 10 && reachOf(s) >= 4_000,
+  },
+  {
+    id: "graffiti-hoarder",
+    title: "【黑歷史塗鴉收藏家】練習稿也是週邊",
+    description:
+      "被圈出來的怪線沒有毀掉你，反而變成圖鑑。粉絲來是為了看你怎麼笑著面對舊稿。",
+    condition: (s) =>
+      heatOf(s) >= 32 && heatOf(s) < 70 && s.talk >= 40 && s.months >= 12,
+  },
+  {
+    id: "shorts-darling",
+    title: "【Shorts 寵兒】八秒也能出神回",
+    description:
+      "正片還在渲，短影音已經先幫你交朋友。演算法偶爾任性，但今晚它站在你這邊。",
+    condition: (s) =>
+      reachOf(s) >= 15_000 && s.months <= 24 && heatOf(s) < 45,
+  },
+  {
+    id: "physics-tamer",
+    title: "【物理引擎馴獸師】綁骨比世界觀可靠",
+    description:
+      "別人怕穿模，你怕物理太安分。技術力不是後台，是你把事故按進節奏裡的那隻手。",
+    condition: (s) =>
+      s.tech >= 62 &&
+      s.tech >= s.talk + 8 &&
+      s.tech >= s.singing + 8 &&
+      s.months >= 16,
+  },
+  {
+    id: "fortune-vessel",
+    title: "【賽博命盤本體】被評測的那顆星星",
+    description:
+      "有人拿你的皮去排盤，結果聊天室比命盤還準。你沒有反駁宇宙，只是把檔期開得更穩。",
+    condition: (s) =>
+      s.talk >= 44 && s.san >= 72 && s.months >= 20 && heatOf(s) < 50,
+  },
+  {
+    id: "meme-chronicler",
+    title: "【迷因編年史官】2026 的切片目錄",
+    description:
+      "三年不是流水帳，是一本迷因年鑑。鹽酥雞、骨折物理與賽博評測，全部有時間戳。",
+    condition: (s) =>
+      s.months >= 36 && reachOf(s) >= 8_000 && heatOf(s) >= 18,
   },
   {
     id: "colamoon-partner",

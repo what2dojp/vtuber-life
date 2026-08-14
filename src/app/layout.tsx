@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VTuber 人生模擬器",
+  title: "VTuber 人生模擬器 v1.2.0",
   description:
     "36 個月配信人生：出道、事故、炎上、圓滿達成。台灣繁體中文 VTuber 迷因模擬器。",
 };

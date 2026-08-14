@@ -53,12 +53,12 @@ interface StatDelta {
   drama: number;
 }
 
-const DEFAULT_NAME = "星野可樂";
+const APP_VERSION = "1.2.0";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
 const MEME_SEEDS = ["colamoon4th", "hololive", "zero-totsu"] as const;
 
-type TalentId = "cola" | "sprint" | "mechanic";
+type TalentId = "cola" | "sprint" | "mechanic" | "horn";
 
 const TALENTS: Record<
   TalentId,
@@ -78,14 +78,14 @@ const TALENTS: Record<
   cola: {
     id: "cola",
     label: "🥤 【可樂神水加護】",
-    description: "歌力 +20、SAN 值上限 +15（開局加算）。",
+    description: "迷因失敗時 SAN 扣除減半。歌力 +20、SAN 上限 +15。",
     fans: 0,
     san: 15,
     talk: 0,
     singing: 20,
     tech: 0,
     drama: 0,
-    log: "天賦【可樂神水加護】覺醒：歌力上升，SAN 上限擴張至 115。",
+    log: "天賦【可樂神水加護】覺醒：歌力上升，SAN 上限擴張，迷因失敗傷害減半。",
   },
   sprint: {
     id: "sprint",
@@ -110,6 +110,18 @@ const TALENTS: Record<
     tech: 25,
     drama: 0,
     log: "天賦【模型修復極速手】覺醒：技術力爆棚，炎上累積減半。",
+  },
+  horn: {
+    id: "horn",
+    label: "🚀 【萬定先鋒號角】",
+    description: "出道前 12 個月粉絲成長雙倍。",
+    fans: 0,
+    san: 0,
+    talk: 8,
+    singing: 0,
+    tech: 0,
+    drama: 0,
+    log: "天賦【萬定先鋒號角】覺醒：前期成長曲線被點燃，粉絲收益雙倍。",
   },
 };
 
@@ -493,6 +505,16 @@ function formatDelta(value: number): string {
   return `${value}`;
 }
 
+function seedWinRatePercent(seed: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  const score = 1200 + ((hash >>> 0) % 8499);
+  return (score / 100).toFixed(2);
+}
+
 function buildShareText(name: string, title: string, seed: string): string {
   const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
   return [
@@ -685,12 +707,29 @@ export default function Home() {
       deltas.fans = Math.round(deltas.fans * 1.25);
     }
 
+    if (
+      !success &&
+      isMemeOption(option) &&
+      careerBuffs.includes("talent_cola") &&
+      deltas.san < 0
+    ) {
+      deltas.san = Math.round(deltas.san * 0.5);
+    }
+
     if (success && hasHighSkillBonus(option, stats) && deltas.fans > 0) {
       deltas.fans = Math.round(deltas.fans * 1.3);
     }
 
     if (success && isSteadyOption(option) && deltas.fans > 0) {
       deltas.fans = Math.round(deltas.fans * 0.5);
+    }
+
+    if (
+      careerBuffs.includes("talent_horn") &&
+      stats.month <= 12 &&
+      deltas.fans > 0
+    ) {
+      deltas.fans *= 2;
     }
 
     if (careerBuffs.includes("talent_mechanic") && deltas.drama > 0) {
@@ -773,21 +812,24 @@ export default function Home() {
       careerBuffs.includes("agency_black"),
       trafficStagnation,
     );
+    const earlyBoost =
+      careerBuffs.includes("talent_horn") && state.month <= 12;
+    const fansGain = earlyBoost ? bonus * 2 : bonus;
     const dramaBurn = state.drama >= 60;
-    if (bonus <= 0 && !dramaBurn) {
+    if (fansGain <= 0 && !dramaBurn) {
       return;
     }
 
     const parts = [
-      bonus > 0
-        ? `被動成長 +${bonus} 粉絲${trafficStagnation ? "（流量停滯 -50%）" : ""}`
+      fansGain > 0
+        ? `被動成長 +${fansGain} 粉絲${trafficStagnation ? "（流量停滯 -50%）" : ""}${earlyBoost ? "（萬定先鋒號角 ×2）" : ""}`
         : null,
       dramaBurn ? "炎上延燒 SAN -5" : null,
     ].filter((part): part is string => part != null);
 
     applyEventResult(
       {
-        fans: state.fans + bonus,
+        fans: state.fans + fansGain,
         san: dramaBurn ? state.san - 5 : state.san,
       },
       `【第 ${state.month} 個月】${parts.join("，")}。`,
@@ -849,6 +891,14 @@ export default function Home() {
 
     if (careerBuffs.includes("talent_mechanic") && deltas.drama > 0) {
       deltas.drama = Math.round(deltas.drama * 0.5);
+    }
+
+    if (
+      careerBuffs.includes("talent_horn") &&
+      stats.month <= 12 &&
+      deltas.fans > 0
+    ) {
+      deltas.fans *= 2;
     }
 
     applyEventResult(toAbsoluteChanges(stats, deltas), option.logText);
@@ -928,7 +978,15 @@ export default function Home() {
 
   async function handleCopySeedLink() {
     const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
-    await navigator.clipboard.writeText(url);
+    const rate = seedWinRatePercent(seed);
+    const text = [
+      `【VTuber 人生模擬器 v${APP_VERSION}】Seed 挑戰書`,
+      `SEED ${seed}`,
+      `全網超越勝率 ${rate}%`,
+      `複製此 Seed 挑戰同一條命運線：${url}`,
+      "#Colamoon4th #VTuber人生模擬器",
+    ].join("\n");
+    await navigator.clipboard.writeText(text);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -1074,12 +1132,15 @@ function CreateScreen({
         <div className="mb-2 flex items-center gap-2 text-pink-300">
           <Radio className="h-4 w-4 animate-pulse" />
           <span className="text-xs font-semibold tracking-[0.28em]">
-            OFFLINE → WAITING ROOM
+            OFFLINE → WAITING ROOM · v{APP_VERSION}
           </span>
         </div>
         <h1 className="bg-gradient-to-r from-pink-300 via-purple-200 to-amber-100 bg-clip-text text-4xl font-black tracking-tight text-transparent sm:text-5xl">
           V-Life 配信人生模擬器
         </h1>
+        <p className="mt-2 text-xs font-black tracking-[0.28em] text-amber-200/90">
+          v{APP_VERSION}
+        </p>
         <p className="mt-4 text-sm leading-7 text-purple-300/70">
           36 個月、一條種子碼、無數次忘記關麥。這是台灣與日本 VTuber
           圈的迷因人生——出道、事故、炎上、圓滿達成。準備好按下開始錄製了嗎？
@@ -1141,12 +1202,12 @@ function CreateScreen({
 
         <div className="mt-6">
           <p className="mx-auto mb-1 inline-flex w-full items-center justify-center rounded-full border border-amber-300/50 bg-gradient-to-r from-purple-600/40 via-pink-500/30 to-amber-400/40 px-3 py-1.5 text-center text-[11px] font-black tracking-[0.18em] text-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.28)]">
-            ✦ 可樂月月四週年特選天賦 ✦
+            ✦ 星火商店高階天賦 ✦
           </p>
           <p className="mt-1 text-center text-[11px] font-semibold tracking-wider text-purple-300/70">
             初始天賦（可選）
           </p>
-          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {(Object.values(TALENTS) as (typeof TALENTS)[TalentId][]).map(
               (item) => {
                 const active = talent === item.id;
@@ -1252,7 +1313,9 @@ function LiveScreen({
             <Radio className="h-3.5 w-3.5" />
             LIVE
           </span>
-          <span className="font-mono text-sm text-purple-300/70">SEED {seed}</span>
+          <span className="font-mono text-sm text-purple-300/70">
+            SEED {seed} · v{APP_VERSION}
+          </span>
         </div>
         <h1 className="text-3xl font-black tracking-tight text-purple-100 md:text-4xl">
           {name}
@@ -1536,6 +1599,11 @@ function getAnniversaryBadges(input: {
       label: "四週年衝刺者",
     },
     {
+      hit: input.talent === "horn",
+      emoji: "🚀",
+      label: "萬定先鋒號角",
+    },
+    {
       hit: input.talent === "mechanic",
       emoji: "🤖",
       label: "模型修復職人",
@@ -1783,6 +1851,9 @@ function GraduationScreen({
             ? "被迫無預警引退"
             : "🎉 創作者生涯圓滿達成！"}
         </p>
+        <p className="mt-1 text-[10px] font-bold tracking-[0.28em] text-purple-300/70">
+          v{APP_VERSION}
+        </p>
       </header>
 
       {cardImageUrl ? (
@@ -1809,11 +1880,14 @@ function GraduationScreen({
             : undefined
         }
       >
-        <p
-          className="text-xs font-bold tracking-[0.35em]"
-          style={{ color: "#f0abfc" }}
-        >
+        <p className="text-xs font-bold tracking-[0.35em]" style={{ color: "#f0abfc" }}>
           VTUBER 生涯成果卡
+        </p>
+        <p
+          className="mt-1 text-[10px] font-black tracking-[0.28em]"
+          style={{ color: "#fde68a" }}
+        >
+          v{APP_VERSION}
         </p>
         <div className="mt-3 flex items-center gap-2">
           <Trophy className="h-6 w-6" style={{ color: "#f5d0fe" }} />
@@ -1822,6 +1896,24 @@ function GraduationScreen({
         <p className="mt-2 font-mono text-xs" style={{ color: "#d8b4fe" }}>
           SEED {seed}
         </p>
+        <div
+          className="mt-3 rounded-xl px-3 py-2"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(126,34,206,0.45) 0%, rgba(219,39,119,0.32) 50%, rgba(202,138,4,0.38) 100%)",
+            border: "1px solid #fbbf24",
+          }}
+        >
+          <p
+            className="text-[10px] font-black tracking-[0.2em]"
+            style={{ color: "#fde68a" }}
+          >
+            SEED 賽馬戰績
+          </p>
+          <p className="mt-1 text-sm font-black" style={{ color: "#fffbeb" }}>
+            Seed #{seed} 全網超越勝率 {seedWinRatePercent(seed)}%
+          </p>
+        </div>
         <p
           className="mt-5 text-2xl font-black"
           style={{ color: "#f9a8d4" }}
@@ -1932,6 +2024,43 @@ function GraduationScreen({
           </a>
         </div>
 
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            left: "16px",
+            bottom: "18px",
+            width: "132px",
+            minHeight: "72px",
+            borderRadius: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transform: "rotate(-8deg)",
+            border: "2px solid #fbbf24",
+            padding: "8px 10px",
+            background:
+              "linear-gradient(160deg, rgba(88,28,135,0.92) 0%, rgba(157,23,77,0.88) 100%)",
+            boxShadow: "0 8px 18px rgba(88,28,135,0.45)",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: "10px",
+              fontWeight: 900,
+              lineHeight: 1.35,
+              textAlign: "center",
+              color: "#fef3c7",
+            }}
+          >
+            Seed #{seed}
+            <br />
+            全網超越
+            <br />
+            {seedWinRatePercent(seed)}%
+          </p>
+        </div>
         <div
           aria-hidden="true"
           style={{
@@ -2048,19 +2177,19 @@ function GraduationScreen({
           <Download className="h-4 w-4" />
           {downloading ? "匯出中…" : "下載生涯成果卡 (PNG)"}
         </button>
+        <button
+          type="button"
+          onClick={onCopySeed}
+          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-amber-300/40 bg-gradient-to-r from-purple-600/40 to-amber-500/30 px-3 py-2.5 text-sm font-bold text-amber-100"
+        >
+          <Share2 className="h-4 w-4" />
+          {copied ? "已複製挑戰書！" : "一鍵複製此 Seed 挑戰"}
+        </button>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={onCopySeed}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-purple-500/10 px-2 py-2 text-[11px] font-bold text-purple-100"
-          >
-            <Share2 className="h-3.5 w-3.5" />
-            {copied ? "已複製" : "Seed"}
-          </button>
-          <button
-            type="button"
             onClick={onReincarnate}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100"
+            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100 col-span-2"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             轉生
