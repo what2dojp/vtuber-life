@@ -520,6 +520,11 @@ function seedRecordSlogan(seed: string): string {
   return `🏆 本局成績與同 Seed ${winRate}% 的玩家相同！`;
 }
 
+function seedStampRateLine(seed: string): string {
+  const winRate = seedWinRatePercent(seed);
+  return `同 Seed ${winRate}%`;
+}
+
 function readUnlockedTitleIds(): string[] {
   if (typeof window === "undefined") {
     return [];
@@ -1937,6 +1942,7 @@ function GraduationScreen({
   const showHtmlCard = cardImageUrl == null;
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
   const recordSlogan = seedRecordSlogan(seed);
+  const stampRateLine = seedStampRateLine(seed);
 
   useEffect(() => {
     unlockTitleId(result.id);
@@ -2165,8 +2171,8 @@ function GraduationScreen({
             position: "absolute",
             left: "16px",
             bottom: "18px",
-            width: "168px",
-            minHeight: "88px",
+            width: "132px",
+            minHeight: "72px",
             borderRadius: "12px",
             display: "flex",
             alignItems: "center",
@@ -2182,14 +2188,18 @@ function GraduationScreen({
           <p
             style={{
               margin: 0,
-              fontSize: "9px",
+              fontSize: "10px",
               fontWeight: 900,
-              lineHeight: 1.4,
+              lineHeight: 1.35,
               textAlign: "center",
               color: "#fef3c7",
             }}
           >
-            {recordSlogan}
+            ⚔️ Seed #{seed}
+            <br />
+            賽馬戰績
+            <br />
+            {stampRateLine}
           </p>
         </div>
         <div
