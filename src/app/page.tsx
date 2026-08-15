@@ -3,12 +3,10 @@
 import { toPng } from "html-to-image";
 import {
   AlertTriangle,
-  Download,
   Flame,
   Heart,
   Radio,
   RotateCcw,
-  Share2,
   Sparkles,
   Trophy,
   Tv,
@@ -982,9 +980,9 @@ export default function Home() {
     const rate = seedWinRatePercent(seed);
     const text = [
       `【VTuber 人生模擬器 v${APP_VERSION}】Seed 挑戰書`,
-      `SEED ${seed}`,
-      `全網超越勝率 ${rate}%`,
-      `複製此 Seed 挑戰同一條命運線：${url}`,
+      `⚔️ Seed #${seed} 賽馬戰績`,
+      `🏆 本局成績超越同 Seed ${rate}% 的創作者！`,
+      `📋 複製此 Seed 發起對決：${url}`,
       "#Colamoon4th #VTuber人生模擬器",
     ].join("\n");
     await navigator.clipboard.writeText(text);
@@ -1203,7 +1201,7 @@ function CreateScreen({
 
         <div className="mt-6">
           <p className="mx-auto mb-1 inline-flex w-full items-center justify-center rounded-full border border-amber-300/50 bg-gradient-to-r from-purple-600/40 via-pink-500/30 to-amber-400/40 px-3 py-1.5 text-center text-[11px] font-black tracking-[0.18em] text-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.28)]">
-            ✦ 星火商店高階天賦 ✦
+            ✦ 🌟 創作者星火天賦（局外成長） ✦
           </p>
           <p className="mt-1 text-center text-[11px] font-semibold tracking-wider text-purple-300/70">
             初始天賦（可選）
@@ -1806,6 +1804,7 @@ function GraduationScreen({
   const [zoomed, setZoomed] = useState(false);
   const showHtmlCard = cardImageUrl == null;
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
+  const winRate = seedWinRatePercent(seed);
 
   useEffect(() => {
     let cancelled = false;
@@ -1909,10 +1908,10 @@ function GraduationScreen({
             className="text-[10px] font-black tracking-[0.2em]"
             style={{ color: "#fde68a" }}
           >
-            SEED 賽馬戰績
+            ⚔️ Seed #{seed} 賽馬戰績
           </p>
-          <p className="mt-1 text-sm font-black" style={{ color: "#fffbeb" }}>
-            Seed #{seed} 全網超越勝率 {seedWinRatePercent(seed)}%
+          <p className="mt-1 text-sm font-black leading-6" style={{ color: "#fffbeb" }}>
+            🏆 本局成績超越同 Seed {winRate}% 的創作者！
           </p>
         </div>
         <p
@@ -2055,11 +2054,11 @@ function GraduationScreen({
               color: "#fef3c7",
             }}
           >
-            Seed #{seed}
+            ⚔️ Seed #{seed}
             <br />
-            全網超越
+            賽馬戰績
             <br />
-            {seedWinRatePercent(seed)}%
+            超越 {winRate}%
           </p>
         </div>
         <div
@@ -2129,7 +2128,7 @@ function GraduationScreen({
           href={COLAMOON_YOUTUBE}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-red-600 via-fuchsia-500 to-amber-400 px-3 py-3 text-center text-sm font-black leading-snug text-white shadow-[0_8px_24px_rgba(244,114,182,0.35)] transition hover:brightness-110"
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-red-600 via-fuchsia-500 to-amber-400 px-4 py-4 text-center text-base font-black leading-snug text-white shadow-[0_12px_32px_rgba(244,114,182,0.5)] ring-2 ring-amber-300/70 transition hover:brightness-110"
         >
           🚀 前往 @colamoonie YouTube！為可樂月月四週年萬定衝刺加油！
         </a>
@@ -2139,7 +2138,7 @@ function GraduationScreen({
             onClick={() => {
               window.open(buildXShareUrl(name, title, seed), "_blank", "noopener,noreferrer");
             }}
-            className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800"
+            className="inline-flex items-center justify-center rounded-xl bg-black px-3 py-2.5 text-sm font-bold text-white/90 transition hover:bg-zinc-800"
           >
             一鍵分享至 X
           </button>
@@ -2152,7 +2151,7 @@ function GraduationScreen({
                 "noopener,noreferrer",
               );
             }}
-            className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-fuchsia-600 to-amber-400 px-3 py-2.5 text-sm font-bold text-white transition hover:brightness-110"
+            className="inline-flex items-center justify-center rounded-xl bg-zinc-800 px-3 py-2.5 text-sm font-bold text-white/90 transition hover:bg-zinc-700"
           >
             一鍵分享至 Threads
           </button>
@@ -2173,30 +2172,35 @@ function GraduationScreen({
             onDownload();
           }}
           disabled={downloading}
-          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-purple-300/20 bg-purple-500/10 px-3 py-2.5 text-sm font-bold text-purple-100 disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-purple-300/25 bg-purple-500/10 px-3 py-2.5 text-sm font-bold text-purple-100 disabled:opacity-60"
         >
-          <Download className="h-4 w-4" />
-          {downloading ? "匯出中…" : "下載生涯成果卡 (PNG)"}
+          {downloading ? "匯出中…" : "🖼️ 儲存生涯成果卡 (PNG)"}
         </button>
         <button
           type="button"
           onClick={onCopySeed}
-          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-amber-300/40 bg-gradient-to-r from-purple-600/40 to-amber-500/30 px-3 py-2.5 text-sm font-bold text-amber-100"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-xl border border-purple-300/25 bg-[#251f35] px-3 py-2.5 text-sm font-bold text-purple-100 transition hover:border-amber-300/40 hover:text-amber-100"
         >
-          <Share2 className="h-4 w-4" />
-          {copied ? "已複製挑戰書！" : "一鍵複製此 Seed 挑戰"}
+          {copied ? "已複製挑戰書！" : `📋 複製 Seed (#${seed}) 發起對決`}
         </button>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={onReincarnate}
-            className="inline-flex items-center justify-center gap-1 rounded-lg border border-purple-300/20 bg-[#251f35] px-2 py-2 text-[11px] font-bold text-purple-100 col-span-2"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            轉生
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onReincarnate}
+          className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold text-purple-300/70 transition hover:text-purple-100"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          轉生
+        </button>
       </div>
+
+      {copied ? (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-[60] w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl border border-amber-300/50 bg-[#1a1625]/95 px-4 py-3 text-center text-sm font-black text-amber-100 shadow-[0_12px_40px_rgba(251,191,36,0.35)] backdrop-blur"
+        >
+          📋 已複製 Seed 挑戰書！快把 #{seed} 丟出去發起對決吧
+        </div>
+      ) : null}
 
       {zoomed && cardImageUrl ? (
         <div
