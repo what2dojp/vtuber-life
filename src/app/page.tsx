@@ -1770,15 +1770,22 @@ function getAnniversaryBadges(input: {
   return picked.map(({ emoji, label }) => ({ emoji, label }));
 }
 
+const EXPORT_CARD_WIDTH = 400;
+
 const GRADUATION_CARD_STYLE: CSSProperties = {
   position: "relative",
+  boxSizing: "border-box",
+  width: EXPORT_CARD_WIDTH,
+  maxWidth: "100%",
   overflow: "hidden",
   borderRadius: "24px",
-  border: "2px solid #c084fc",
-  padding: "32px 32px 112px",
-  background:
-    "linear-gradient(160deg, #1a0828 0%, #16041f 45%, #2a0b24 100%)",
+  border: "2px solid #f5d0fe",
+  padding: "28px 28px 118px",
   color: "#faf5ff",
+  backgroundImage:
+    "linear-gradient(180deg, rgba(253,230,138,0.18) 0%, transparent 16%), radial-gradient(ellipse at 100% 0%, rgba(244,114,182,0.28), transparent 42%), radial-gradient(ellipse at 0% 100%, rgba(126,34,206,0.35), transparent 46%), linear-gradient(160deg, #1a0828 0%, #16041f 48%, #2a0b24 100%)",
+  boxShadow:
+    "inset 0 0 0 1px rgba(251,191,36,0.7), inset 0 1px 0 rgba(255,255,255,0.16), inset 0 -40px 80px rgba(88,28,135,0.35), 0 0 0 3px rgba(192,132,252,0.35), 0 18px 48px rgba(88,28,135,0.55)",
 };
 
 function waitForHtmlImage(img: HTMLImageElement): Promise<void> {
@@ -1845,7 +1852,7 @@ async function captureGraduationPng(
   node: HTMLElement,
   pixelRatio: number,
 ): Promise<string> {
-  const width = Math.ceil(Math.max(node.scrollWidth, node.offsetWidth, 390));
+  const width = EXPORT_CARD_WIDTH;
   const height = Math.ceil(Math.max(node.scrollHeight, node.offsetHeight, 1));
   const dataUrl = await toPng(node, {
     cacheBust: true,
@@ -1858,8 +1865,9 @@ async function captureGraduationPng(
       left: "0",
       top: "0",
       transform: "none",
+      width: `${EXPORT_CARD_WIDTH}px`,
+      maxWidth: `${EXPORT_CARD_WIDTH}px`,
       maxHeight: "none",
-      maxWidth: "none",
     },
   });
 
@@ -2002,9 +2010,9 @@ function GraduationScreen({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center px-4 py-3">
-      <section className="flex w-full flex-col items-stretch gap-3">
-      <header className="text-center">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center px-4 py-4">
+      <section className="flex w-full max-w-[400px] flex-col items-center gap-3">
+      <header className="w-full text-center">
         <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
           {isCrisisExit ? "FORCED RETIREMENT" : "MILESTONE"}
         </p>
@@ -2028,16 +2036,25 @@ function GraduationScreen({
           src={cardImageUrl}
           alt={`${name} 的 VTuber 生涯成果卡`}
           onClick={() => setZoomed(true)}
-          className="mx-auto max-h-[min(46dvh,24rem)] w-full cursor-zoom-in rounded-2xl border border-purple-300/25 bg-[#16041f] object-contain shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+          className="mx-auto w-full max-w-[400px] cursor-zoom-in rounded-[24px] bg-[#16041f] object-contain shadow-[0_18px_48px_rgba(88,28,135,0.55)]"
           style={{ touchAction: "pinch-zoom" }}
         />
       ) : (
-        <div className="max-h-[min(46dvh,24rem)] w-full overflow-y-auto rounded-2xl border border-purple-300/25 shadow-[0_12px_40px_rgba(88,28,135,0.45)]">
       <div
         id="export-card"
         ref={cardRef}
         style={GRADUATION_CARD_STYLE}
       >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 10,
+            borderRadius: 16,
+            border: "1px solid rgba(253,230,138,0.22)",
+            pointerEvents: "none",
+          }}
+        />
         <p className="text-xs font-bold tracking-[0.35em]" style={{ color: "#f0abfc" }}>
           VTUBER 生涯成果卡
         </p>
@@ -2090,7 +2107,7 @@ function GraduationScreen({
           </p>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-3">
           <ReportStat label="最終訂閱數" value={formatFans(fans)} />
           <ReportStat label="活動月數" value={`${careerMonths} / 36`} />
           <ReportStat label="總炎上次數" value={`${drama}`} />
@@ -2272,7 +2289,6 @@ function GraduationScreen({
           </div>
         </div>
       </div>
-        </div>
       )}
 
       <p className="text-center text-[11px] leading-5 text-purple-300/75">
