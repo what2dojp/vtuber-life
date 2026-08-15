@@ -515,9 +515,9 @@ function seedWinRatePercent(seed: string): string {
   return (score / 100).toFixed(2);
 }
 
-function seedTopPercent(seed: string): string {
-  const beaten = Number(seedWinRatePercent(seed));
-  return Math.max(1, 100 - beaten).toFixed(1);
+function seedRecordSlogan(seed: string): string {
+  const winRate = seedWinRatePercent(seed);
+  return `🏆 本局成績與同 Seed ${winRate}% 的玩家相同！`;
 }
 
 function readUnlockedTitleIds(): string[] {
@@ -1014,11 +1014,10 @@ export default function Home() {
 
   async function handleCopySeedLink() {
     const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
-    const top = seedTopPercent(seed);
     const text = [
       `【VTuber 人生模擬器 v${APP_VERSION}】Seed 挑戰書`,
       `⚔️ Seed #${seed} 賽馬戰績`,
-      `🏆 在 Seed #${seed} 賽馬中勇奪 Top ${top}% 戰績！`,
+      seedRecordSlogan(seed),
       `📋 複製此 Seed 發起對決：${url}`,
       "#Colamoon4th #VTuber人生模擬器",
     ].join("\n");
@@ -1937,7 +1936,7 @@ function GraduationScreen({
   const [zoomed, setZoomed] = useState(false);
   const showHtmlCard = cardImageUrl == null;
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
-  const topPercent = seedTopPercent(seed);
+  const recordSlogan = seedRecordSlogan(seed);
 
   useEffect(() => {
     unlockTitleId(result.id);
@@ -2009,13 +2008,12 @@ function GraduationScreen({
         className={
           showHtmlCard
             ? "relative w-full shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
-            : "hidden"
+            : "pointer-events-none fixed top-0 left-[-10000px] w-[390px]"
         }
-        style={
-          showHtmlCard
-            ? { ...GRADUATION_CARD_STYLE, touchAction: "pinch-zoom" }
-            : undefined
-        }
+        style={{
+          ...GRADUATION_CARD_STYLE,
+          touchAction: showHtmlCard ? "pinch-zoom" : undefined,
+        }}
       >
         <p className="text-xs font-bold tracking-[0.35em]" style={{ color: "#f0abfc" }}>
           VTUBER 生涯成果卡
@@ -2048,7 +2046,7 @@ function GraduationScreen({
             ⚔️ Seed #{seed} 賽馬戰績
           </p>
           <p className="mt-1 text-sm font-black leading-6" style={{ color: "#fffbeb" }}>
-            🏆 在 Seed #{seed} 賽馬中勇奪 Top {topPercent}% 戰績！
+            {recordSlogan}
           </p>
         </div>
         <p
@@ -2167,8 +2165,8 @@ function GraduationScreen({
             position: "absolute",
             left: "16px",
             bottom: "18px",
-            width: "132px",
-            minHeight: "72px",
+            width: "168px",
+            minHeight: "88px",
             borderRadius: "12px",
             display: "flex",
             alignItems: "center",
@@ -2184,18 +2182,14 @@ function GraduationScreen({
           <p
             style={{
               margin: 0,
-              fontSize: "10px",
+              fontSize: "9px",
               fontWeight: 900,
-              lineHeight: 1.35,
+              lineHeight: 1.4,
               textAlign: "center",
               color: "#fef3c7",
             }}
           >
-            ⚔️ Seed #{seed}
-            <br />
-            賽馬戰績
-            <br />
-            Top {topPercent}%
+            {recordSlogan}
           </p>
         </div>
         <div
