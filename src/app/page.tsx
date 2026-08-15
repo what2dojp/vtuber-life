@@ -53,6 +53,7 @@ interface StatDelta {
 
 const UNLOCKED_TITLES_KEY = "unlocked_titles";
 const TITLE_ATLAS_GOAL = 50;
+const APP_VERSION = "1.2.0";
 const DEFAULT_NAME = "可樂月月";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
