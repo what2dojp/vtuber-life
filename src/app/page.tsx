@@ -1841,12 +1841,26 @@ async function waitForCardAssets(root: HTMLElement): Promise<void> {
   });
 }
 
-async function exportGraduationPng(node: HTMLElement): Promise<string> {
-  await waitForCardAssets(node);
+async function captureGraduationPng(
+  node: HTMLElement,
+  pixelRatio: number,
+): Promise<string> {
+  const width = Math.ceil(Math.max(node.scrollWidth, node.offsetWidth, 390));
+  const height = Math.ceil(Math.max(node.scrollHeight, node.offsetHeight, 1));
   const dataUrl = await toPng(node, {
     cacheBust: true,
-    pixelRatio: 2,
+    pixelRatio,
     backgroundColor: "#16041f",
+    width,
+    height,
+    style: {
+      position: "relative",
+      left: "0",
+      top: "0",
+      transform: "none",
+      maxHeight: "none",
+      maxWidth: "none",
+    },
   });
 
   if (!dataUrl.startsWith("data:image") || dataUrl.length < 500) {
@@ -1854,6 +1868,15 @@ async function exportGraduationPng(node: HTMLElement): Promise<string> {
   }
 
   return dataUrl;
+}
+
+async function exportGraduationPng(node: HTMLElement): Promise<string> {
+  await waitForCardAssets(node);
+  try {
+    return await captureGraduationPng(node, 2);
+  } catch {
+    return await captureGraduationPng(node, 1);
+  }
 }
 
 function GraduationScreen({
@@ -1940,7 +1963,7 @@ function GraduationScreen({
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const showInlineCard = previewFailed && cardImageUrl == null;
+  const cardRef = useRef<HTMLDivElement>(null);
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
   const recordSlogan = seedRecordSlogan(seed);
   const stampRateLine = seedStampRateLine(seed);
@@ -1953,7 +1976,7 @@ function GraduationScreen({
     let cancelled = false;
 
     void (async () => {
-      const node = document.getElementById("export-card");
+      const node = cardRef.current;
       if (!(node instanceof HTMLElement)) {
         if (!cancelled) {
           setPreviewFailed(true);
@@ -2008,31 +2031,12 @@ function GraduationScreen({
           className="mx-auto max-h-[min(46dvh,24rem)] w-full cursor-zoom-in rounded-2xl border border-purple-300/25 bg-[#16041f] object-contain shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
           style={{ touchAction: "pinch-zoom" }}
         />
-      ) : showInlineCard ? null : (
-        <div className="flex max-h-[min(46dvh,24rem)] min-h-24 items-center justify-center rounded-2xl border border-purple-300/20 bg-[#16041f]/80 px-4 py-6 text-center text-sm font-bold text-purple-200/80">
-          正在產生分享圖……
-        </div>
-      )}
-
+      ) : (
+        <div className="max-h-[min(46dvh,24rem)] w-full overflow-y-auto rounded-2xl border border-purple-300/25 shadow-[0_12px_40px_rgba(88,28,135,0.45)]">
       <div
         id="export-card"
-        aria-hidden={showInlineCard ? undefined : true}
-        className={
-          showInlineCard
-            ? "relative max-h-[min(46dvh,24rem)] w-full overflow-y-auto rounded-2xl shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
-            : "pointer-events-none fixed top-0 left-[-10000px] w-[390px]"
-        }
-        style={{
-          ...GRADUATION_CARD_STYLE,
-          ...(showInlineCard
-            ? null
-            : {
-                position: "fixed",
-                top: 0,
-                left: -10000,
-                width: 390,
-              }),
-        }}
+        ref={cardRef}
+        style={GRADUATION_CARD_STYLE}
       >
         <p className="text-xs font-bold tracking-[0.35em]" style={{ color: "#f0abfc" }}>
           VTUBER 生涯成果卡
@@ -2268,13 +2272,15 @@ function GraduationScreen({
           </div>
         </div>
       </div>
+        </div>
+      )}
 
       <p className="text-center text-[11px] leading-5 text-purple-300/75">
         {cardImageUrl
           ? "點擊放大 · 手機可長按圖片儲存至相簿"
           : previewFailed
             ? "已改以網頁版顯示生涯成果卡 · 可直接截圖儲存"
-            : "正在產生分享圖……生涯成果卡就緒後即可下載"}
+            : "可捲動查看完整成果卡 · 正在產生分享圖"}
       </p>
 
       <div className="flex flex-col gap-2">
