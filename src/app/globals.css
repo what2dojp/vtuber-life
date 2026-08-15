@@ -12,6 +12,26 @@
   --font-mono: var(--font-geist-mono);
   --animate-chat-in: chat-in 0.28s ease-out;
   --animate-danmaku-fly: danmaku-fly 2.2s linear forwards;
+  --animate-drama-shake: drama-shake 0.5s ease-in-out infinite;
+}
+
+@keyframes drama-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px) rotate(-0.5deg);
+  }
+  40% {
+    transform: translateX(3px) rotate(0.5deg);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 @keyframes chat-in {

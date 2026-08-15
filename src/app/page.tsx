@@ -31,7 +31,7 @@ import {
   type GameEvent,
 } from "@/data/events";
 import { checkChance, getRandomInt, shuffleArray } from "@/lib/prng";
-import { getEpilogue, getVTuberTitle } from "@/lib/titles";
+import { getEpilogue, getVTuberTitle, TITLES } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
 type EventOutcome = EventSuccess | EventFailure;
@@ -51,7 +51,8 @@ interface StatDelta {
   drama: number;
 }
 
-const APP_VERSION = "1.2.0";
+const UNLOCKED_TITLES_KEY = "unlocked_titles";
+const TITLE_ATLAS_GOAL = 50;
 const DEFAULT_NAME = "可樂月月";
 const DEFAULT_SEED = "v-life-2026";
 const COLAMOON_YOUTUBE = "https://www.youtube.com/@colamoonie";
@@ -512,6 +513,42 @@ function seedWinRatePercent(seed: string): string {
   }
   const score = 1200 + ((hash >>> 0) % 8499);
   return (score / 100).toFixed(2);
+}
+
+function seedTopPercent(seed: string): string {
+  const beaten = Number(seedWinRatePercent(seed));
+  return Math.max(1, 100 - beaten).toFixed(1);
+}
+
+function readUnlockedTitleIds(): string[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const parsed: unknown = JSON.parse(
+      window.localStorage.getItem(UNLOCKED_TITLES_KEY) ?? "[]",
+    );
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter((item): item is string => typeof item === "string");
+  } catch {
+    return [];
+  }
+}
+
+function unlockTitleId(id: string): void {
+  if (typeof window === "undefined" || id.length === 0) {
+    return;
+  }
+  const current = readUnlockedTitleIds();
+  if (current.includes(id)) {
+    return;
+  }
+  window.localStorage.setItem(
+    UNLOCKED_TITLES_KEY,
+    JSON.stringify([...current, id]),
+  );
 }
 
 function buildShareText(name: string, title: string, seed: string): string {
@@ -977,11 +1014,11 @@ export default function Home() {
 
   async function handleCopySeedLink() {
     const url = `${window.location.origin}${window.location.pathname}?seed=${encodeURIComponent(seed)}`;
-    const rate = seedWinRatePercent(seed);
+    const top = seedTopPercent(seed);
     const text = [
       `【VTuber 人生模擬器 v${APP_VERSION}】Seed 挑戰書`,
       `⚔️ Seed #${seed} 賽馬戰績`,
-      `🏆 本局成績超越同 Seed ${rate}% 的創作者！`,
+      `🏆 在 Seed #${seed} 賽馬中勇奪 Top ${top}% 戰績！`,
       `📋 複製此 Seed 發起對決：${url}`,
       "#Colamoon4th #VTuber人生模擬器",
     ].join("\n");
@@ -1108,6 +1145,80 @@ function CrisisRetirementOverlay({
   );
 }
 
+function countUnlockedTitles(ids: string[]): number {
+  const unlocked = new Set(ids);
+  return TITLES.filter((entry) => unlocked.has(entry.id)).length;
+}
+
+function TitleAtlasModal({
+  unlockedIds,
+  onClose,
+}: {
+  unlockedIds: string[];
+  onClose: () => void;
+}) {
+  const unlocked = new Set(unlockedIds);
+  const unlockedCount = countUnlockedTitles(unlockedIds);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[#1a1625]/90 px-4 py-8 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="稱號圖鑑"
+    >
+      <div
+        className="my-auto w-full max-w-5xl rounded-3xl border border-amber-300/30 bg-[#251f35] p-6 shadow-[0_0_48px_rgba(251,191,36,0.2)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-black tracking-[0.3em] text-amber-200">
+              TITLE ATLAS
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-purple-50">
+              🏆 稱號解鎖圖鑑 ({unlockedCount}/{TITLE_ATLAS_GOAL})
+            </h2>
+            <p className="mt-2 text-sm text-purple-300/75">
+              走完不同 Seed 與抉擇，收集尚未見過的結局稱號。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-purple-300/20 px-3 py-1.5 text-xs font-bold text-purple-200 hover:bg-purple-500/10"
+          >
+            關閉
+          </button>
+        </div>
+        <div className="grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+          {TITLES.map((entry) => {
+            const isUnlocked = unlocked.has(entry.id);
+            return (
+              <article
+                key={entry.id}
+                className={`rounded-2xl border p-4 ${
+                  isUnlocked
+                    ? "border-amber-300/35 bg-gradient-to-br from-purple-600/25 to-amber-500/10"
+                    : "border-purple-300/15 bg-[#1a1625] grayscale opacity-55"
+                }`}
+              >
+                <p className="text-sm font-black text-purple-50">
+                  {isUnlocked ? entry.title : "【？？？】未解鎖"}
+                </p>
+                <p className="mt-2 text-xs leading-6 text-purple-200/80">
+                  {isUnlocked ? entry.description : "走完一局生涯成果，才會揭曉這張卡牌。"}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CreateScreen({
   nameInput,
   seedInput,
@@ -1124,6 +1235,12 @@ function CreateScreen({
   onDebut: (talent: TalentId | null) => void;
 }) {
   const [talent, setTalent] = useState<TalentId | null>(null);
+  const [atlasOpen, setAtlasOpen] = useState(false);
+  const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setUnlockedIds(readUnlockedTitleIds());
+  }, []);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col justify-center px-4 py-8 md:px-8">
@@ -1144,6 +1261,16 @@ function CreateScreen({
           36 個月、一條種子碼、無數次忘記關麥。這是台灣與日本 VTuber
           圈的迷因人生——出道、事故、炎上、圓滿達成。準備好按下開始錄製了嗎？
         </p>
+        <button
+          type="button"
+          onClick={() => {
+            setUnlockedIds(readUnlockedTitleIds());
+            setAtlasOpen(true);
+          }}
+          className="mt-5 inline-flex w-full items-center justify-center rounded-xl border border-amber-300/40 bg-gradient-to-r from-purple-600/30 to-amber-500/20 px-4 py-2.5 text-sm font-black text-amber-100 transition hover:brightness-110"
+        >
+          🏆 稱號圖鑑 ({countUnlockedTitles(unlockedIds)}/{TITLE_ATLAS_GOAL})
+        </button>
 
         <label className="mt-8 block text-xs font-semibold tracking-wider text-purple-300/70">
           藝名
@@ -1251,6 +1378,12 @@ function CreateScreen({
       <div className="mx-auto mt-8 w-full max-w-3xl">
         <ColamoonHomeBanner />
       </div>
+      {atlasOpen ? (
+        <TitleAtlasModal
+          unlockedIds={unlockedIds}
+          onClose={() => setAtlasOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
@@ -1380,6 +1513,7 @@ function LiveScreen({
               value={drama}
               icon={<Flame className="h-4 w-4 text-orange-400" />}
               accent
+              critical={drama >= 85}
             />
           </section>
           {getDynamicBuffs(
@@ -1401,12 +1535,11 @@ function LiveScreen({
         </aside>
 
         <section className="relative flex h-auto min-h-[420px] flex-col rounded-2xl border border-purple-300/20 bg-[#251f35]/80 p-6 shadow-[0_0_36px_rgba(244,114,182,0.12)] lg:col-span-6">
-          {drama >= 85 && drama < 100 ? (
+          {drama >= 85 ? (
             <div className="mb-4 animate-pulse rounded-2xl border-2 border-red-500 bg-red-600/25 px-4 py-3 shadow-[0_0_28px_rgba(239,68,68,0.45)]">
               <p className="inline-flex items-start gap-2 text-sm font-black leading-6 text-red-100">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
-                ⚠️ 公關危機已達臨界點 (Drama: {drama})！若達到 100
-                將面臨強制無預警引退！請盡快選擇【穩健】選項進行公關洗白！
+                ⚠️ 炎上值過高！請適度選擇【穩健】降低關注度。
               </p>
             </div>
           ) : null}
@@ -1804,7 +1937,11 @@ function GraduationScreen({
   const [zoomed, setZoomed] = useState(false);
   const showHtmlCard = cardImageUrl == null;
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
-  const winRate = seedWinRatePercent(seed);
+  const topPercent = seedTopPercent(seed);
+
+  useEffect(() => {
+    unlockTitleId(result.id);
+  }, [result.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1911,7 +2048,7 @@ function GraduationScreen({
             ⚔️ Seed #{seed} 賽馬戰績
           </p>
           <p className="mt-1 text-sm font-black leading-6" style={{ color: "#fffbeb" }}>
-            🏆 本局成績超越同 Seed {winRate}% 的創作者！
+            🏆 在 Seed #{seed} 賽馬中勇奪 Top {topPercent}% 戰績！
           </p>
         </div>
         <p
@@ -2058,7 +2195,7 @@ function GraduationScreen({
             <br />
             賽馬戰績
             <br />
-            超越 {winRate}%
+            Top {topPercent}%
           </p>
         </div>
         <div
@@ -2337,21 +2474,33 @@ function StatCard({
   value,
   icon,
   accent,
+  critical,
 }: {
   label: string;
   value: number;
   icon?: ReactNode;
   accent?: boolean;
+  critical?: boolean;
 }) {
   return (
     <div
-      className={`rounded-2xl border p-6 ${accent ? "border-orange-400/30 bg-orange-500/10" : "border-purple-300/20 bg-[#251f35]/80"}`}
+      className={`rounded-2xl border p-6 ${
+        critical
+          ? "animate-drama-shake animate-pulse border-red-500 bg-red-600/20 shadow-[0_0_24px_rgba(239,68,68,0.45)]"
+          : accent
+            ? "border-orange-400/30 bg-orange-500/10"
+            : "border-purple-300/20 bg-[#251f35]/80"
+      }`}
     >
       <p className="flex items-center gap-1 text-[11px] font-medium text-purple-300/70">
         {icon}
         {label}
       </p>
-      <p className="mt-1 font-mono text-2xl font-black text-purple-100">{value}</p>
+      <p
+        className={`mt-1 font-mono text-2xl font-black ${critical ? "text-red-200" : "text-purple-100"}`}
+      >
+        {value}
+      </p>
     </div>
   );
 }
