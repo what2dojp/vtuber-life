@@ -1940,7 +1940,7 @@ function GraduationScreen({
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [zoomed, setZoomed] = useState(false);
-  const showHtmlCard = cardImageUrl == null;
+  const showInlineCard = previewFailed && cardImageUrl == null;
   const isCrisisExit = drama >= 100 || peakDrama >= 100 || san <= 0;
   const recordSlogan = seedRecordSlogan(seed);
   const stampRateLine = seedStampRateLine(seed);
@@ -1979,22 +1979,23 @@ function GraduationScreen({
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-xl flex-col justify-center px-4 py-6">
-      <header className="mb-3 text-center">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col items-center justify-center px-4 py-3">
+      <section className="flex w-full flex-col items-stretch gap-3">
+      <header className="text-center">
         <p className="text-[10px] font-bold tracking-[0.35em] text-fuchsia-300/80">
           {isCrisisExit ? "FORCED RETIREMENT" : "MILESTONE"}
         </p>
-        <h1 className="mt-1 text-xl font-black text-purple-50">
+        <h1 className="mt-1 text-lg font-black text-purple-50 sm:text-xl">
           {name} 的生涯成果報告
         </h1>
         <p
-          className={`mt-2 text-sm font-black ${isCrisisExit ? "text-red-300" : "text-amber-200"}`}
+          className={`mt-1 text-sm font-black ${isCrisisExit ? "text-red-300" : "text-amber-200"}`}
         >
           {isCrisisExit
             ? "被迫無預警引退"
             : "🎉 創作者生涯圓滿達成！"}
         </p>
-        <p className="mt-1 text-[10px] font-bold tracking-[0.28em] text-purple-300/70">
+        <p className="mt-0.5 text-[10px] font-bold tracking-[0.28em] text-purple-300/70">
           v{APP_VERSION}
         </p>
       </header>
@@ -2004,22 +2005,33 @@ function GraduationScreen({
           src={cardImageUrl}
           alt={`${name} 的 VTuber 生涯成果卡`}
           onClick={() => setZoomed(true)}
-          className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-purple-300/25 bg-[#16041f] shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+          className="mx-auto max-h-[min(46dvh,24rem)] w-full cursor-zoom-in rounded-2xl border border-purple-300/25 bg-[#16041f] object-contain shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
           style={{ touchAction: "pinch-zoom" }}
         />
-      ) : null}
+      ) : showInlineCard ? null : (
+        <div className="flex max-h-[min(46dvh,24rem)] min-h-24 items-center justify-center rounded-2xl border border-purple-300/20 bg-[#16041f]/80 px-4 py-6 text-center text-sm font-bold text-purple-200/80">
+          正在產生分享圖……
+        </div>
+      )}
 
       <div
         id="export-card"
-        aria-hidden={cardImageUrl ? true : undefined}
+        aria-hidden={showInlineCard ? undefined : true}
         className={
-          showHtmlCard
-            ? "relative w-full shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
+          showInlineCard
+            ? "relative max-h-[min(46dvh,24rem)] w-full overflow-y-auto rounded-2xl shadow-[0_12px_40px_rgba(88,28,135,0.45)]"
             : "pointer-events-none fixed top-0 left-[-10000px] w-[390px]"
         }
         style={{
           ...GRADUATION_CARD_STYLE,
-          touchAction: showHtmlCard ? "pinch-zoom" : undefined,
+          ...(showInlineCard
+            ? null
+            : {
+                position: "fixed",
+                top: 0,
+                left: -10000,
+                width: 390,
+              }),
         }}
       >
         <p className="text-xs font-bold tracking-[0.35em]" style={{ color: "#f0abfc" }}>
@@ -2257,20 +2269,20 @@ function GraduationScreen({
         </div>
       </div>
 
-      <p className="mt-2 text-center text-[11px] leading-5 text-purple-300/75">
+      <p className="text-center text-[11px] leading-5 text-purple-300/75">
         {cardImageUrl
           ? "點擊放大 · 手機可長按圖片儲存至相簿"
           : previewFailed
             ? "已改以網頁版顯示生涯成果卡 · 可直接截圖儲存"
-            : "正在產生分享圖……生涯成果卡已可先在上方閱讀"}
+            : "正在產生分享圖……生涯成果卡就緒後即可下載"}
       </p>
 
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
         <a
           href={COLAMOON_YOUTUBE}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-red-600 via-fuchsia-500 to-amber-400 px-4 py-4 text-center text-base font-black leading-snug text-white shadow-[0_12px_32px_rgba(244,114,182,0.5)] ring-2 ring-amber-300/70 transition hover:brightness-110"
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-red-600 via-fuchsia-500 to-amber-400 px-4 py-3 text-center text-sm font-black leading-snug text-white shadow-[0_12px_32px_rgba(244,114,182,0.5)] ring-2 ring-amber-300/70 transition hover:brightness-110 sm:py-3.5 sm:text-base"
         >
           🚀 前往 @colamoonie YouTube！為可樂月月四週年萬定衝刺加油！
         </a>
@@ -2298,9 +2310,6 @@ function GraduationScreen({
             一鍵分享至 Threads
           </button>
         </div>
-      </div>
-
-      <div className="mt-2 flex flex-col gap-2">
         <button
           type="button"
           onClick={() => {
@@ -2328,12 +2337,13 @@ function GraduationScreen({
         <button
           type="button"
           onClick={onReincarnate}
-          className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold text-purple-300/70 transition hover:text-purple-100"
+          className="inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-purple-300/70 transition hover:text-purple-100"
         >
           <RotateCcw className="h-3.5 w-3.5" />
           轉生
         </button>
       </div>
+      </section>
 
       {copied ? (
         <div
