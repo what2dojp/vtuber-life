@@ -30,7 +30,47 @@ export interface GameEvent {
   title: string;
   description: string;
   options: EventOption[];
+  rarity?: "normal" | "ssr";
+  chain?: {
+    onType: EventOption["type"];
+    followUpId: string;
+    delayMonths: number;
+  };
+  chainFrom?: string;
 }
+
+export const SSR_APPEAR_RATE = 0.05;
+
+export const EVENT_VARIABLE_POOLS: Record<string, string[]> = {
+  randomStreamer: [
+    "可樂月月",
+    "迷宮歌姬露娜",
+    "公會會計艾拉",
+    "夜巡聖騎士米亞",
+    "黑市鑑定師可可",
+    "城門衛隊長小雛",
+    "圖書館幽靈栞",
+  ],
+  randomFood: [
+    "牛肉麵",
+    "鹽酥雞",
+    "滷肉飯",
+    "雞排",
+    "珍珠奶茶",
+    "關東煮",
+    "臭豆腐",
+    "鹹酥雞加辣",
+  ],
+  randomGlitch: [
+    "頭髮穿頭",
+    "JoJo 停格",
+    "裙擺垂直升空",
+    "T-Pose 覺醒",
+    "眼肌抽搐",
+    "胸口次元膨脹",
+    "脖子轉 180 度",
+  ],
+};
 
 const OPTION_PREFIX = {
   steady: "【穩健】",
@@ -74,6 +114,36 @@ function opt(
     success,
     failure,
   });
+}
+
+export function fillEventVariables(
+  event: GameEvent,
+  pick: <T>(items: T[]) => T,
+): GameEvent {
+  const chosen: Record<string, string> = {};
+
+  function replace(text: string): string {
+    return text.replace(/\{(\w+)\}/g, (matched, key: string) => {
+      const pool = EVENT_VARIABLE_POOLS[key];
+      if (!pool || pool.length === 0) {
+        return matched;
+      }
+      chosen[key] ??= pick(pool);
+      return chosen[key];
+    });
+  }
+
+  return {
+    ...event,
+    title: replace(event.title),
+    description: replace(event.description),
+    options: event.options.map((option) => ({
+      ...option,
+      label: replace(option.label),
+      success: { ...option.success, log: replace(option.success.log) },
+      failure: { ...option.failure, log: replace(option.failure.log) },
+    })),
+  };
 }
 
 const RAW_EVENTS: GameEvent[] = [
@@ -1697,9 +1767,231 @@ const RAW_EVENTS: GameEvent[] = [
       opt("meme", 53, "在正片疊「這才是正版」巨大浮水印並跳舞。", { log: "浮水印舞迷因化，盜播畫面反而幫你打廣告！", fans: 6000, singing: 4, drama: 10 }, { log: "浮水印擋到模型，觀眾抱怨看不清楚……", fans: 200, san: -10 }),
     ],
   },
+  {
+    id: "event_cyber_telepathy_war",
+    title: "【賽博通靈大圍剿】Threads 公會開撕，有人當眾讀你的真名！",
+    description:
+      "異世界公會的告示板（Threads）突然爆發通靈大戰：有創作者宣稱能隔空讀取中之人的「真名、工會與昨晚的綠界」。你的皮被做成通靈素材，同看一邊喊領域展開、一邊轉發對線串。",
+    options: [
+      opt("steady", 78, "發一則不開撕聲明，檔期照開、不回應真名猜測。", { log: "不參戰讓風向降溫，老粉誇你公會紀律很好。", fans: 1100, san: 8, drama: -6, talk: 3 }, { log: "被說心虛，通靈串還在讀你的待機室……", san: -10, drama: 12 }),
+      opt("standard", 73, "開「反通靈雜談」，把謠言一條條當副本攻略拆解。", { log: "攻略向拆謠意外好看，連動邀請湧入！", fans: 4100, talk: 9, drama: -4 }, { log: "拆到一半被斷章，變成新的通靈素材……", fans: 600, san: -12, drama: 16 }),
+      opt("gambling", 40, "直接進對方串對線，賭自己能當眾打臉通靈。", { log: "對線打臉成功，公會封你為「反通靈聖騎士」！", fans: 9000, talk: 8, drama: 18 }, { log: "對線翻車，真名猜測被剪成精華……", fans: -1600, san: -28, drama: 36 }),
+      opt("meme", 56, "戴錫箔高帽開「賽博結界」，請 Super Chat 當魔法陣。", { log: "結界迷因出圈，通靈大戰變成你的招牌副本！", fans: 6800, talk: 8, drama: 12 }, { log: "被說消費當事人，嚴肅粉退訂……", fans: -500, san: -16, drama: 22 }),
+    ],
+  },
+  {
+    id: "event_midnight_beef_noodle_meme",
+    title: "【凌晨三點{randomFood}號角】宵夜香氣洩進副本，冒險者全軍出動！",
+    description:
+      "耐久討伐開到凌晨三點，世界觀裡的「城門號角」其實是你點的{randomFood}到了。湯頭香混進麥克風，彈幕從 Boss 機制改討論要不要加酸菜。異世界食堂的秘密，正在被同看逐幀鑑定。",
+    chain: {
+      onType: "gambling",
+      followUpId: "event_beef_noodle_doujin_callback",
+      delayMonths: 5,
+    },
+    options: [
+      opt("steady", 79, "切待機圖取餐，回來只說「補給完成」不播畫面。", { log: "補給成功，夜貓子覺得你很專業。", fans: 900, san: 10 }, { log: "取餐太久，討伐隊以為你被牛肉麵抓走……", san: -8 }),
+      opt("standard", 74, "改開「城門食堂」宵夜台，邊吃邊講今日副本。", { log: "食堂夜話意外溫馨，夜班冒險者訂閱湧入！", fans: 3800, talk: 8, san: 12 }, { log: "吸麵聲太大，ASMR 粉與吃飯台粉開打……", fans: 700, san: -10, drama: 10 }),
+      opt("gambling", 41, "把麵碗當聖遺物展示，號召全台同步加辣。", { log: "加辣號角成為都市傳說，切片標題全是熱淚！", fans: 9200, talk: 6, drama: 16 }, { log: "被嗆消費飲食勞工，號角變成檢討文……", fans: -1100, san: -24, drama: 28 }),
+      opt("meme", 58, "宣布這是「凌晨三點限定召喚獸：紅燒牛肉龍」。", { log: "牛肉龍設定補完，宵夜變成每月世界觀儀式！", fans: 6400, talk: 8, drama: 12 }, { log: "湯灑鍵盤，耐久討伐緊急滅火……", fans: 400, san: -14, drama: 14 }),
+    ],
+  },
+  {
+    id: "event_anime_3d_glitch",
+    title: "【3D 骨折翻轉】JoJo 立繪走位失敗，作畫崩壞領域展開！",
+    description:
+      "3D 歌回副歌突然觸發「作畫崩壞領域」：出現{randomGlitch}，表情卻還在微笑。聊天室開始報幀數與骨折部位，有人喊這是替身使者，有人喊請模型師帶鍋。",
+    options: [
+      opt("steady", 77, "立刻關動作捕捉、切 2D 待機，請綁骨師遠端急救。", { log: "停損漂亮，事後還被誇懂得保護模型師。", fans: 1000, tech: 6, san: 6 }, { log: "切太慢，領域展開已被烤肉 Man 封神……", san: -10, drama: 8 }),
+      opt("standard", 73, "暫停唱歌，改開「崩壞鑑賞會」講骨骼與幀。", { log: "鑑賞會變成技術向神回，綁骨社群轉發！", fans: 4000, tech: 10, talk: 5 }, { log: "越講越崩，鑑賞會變成第二次領域展開……", fans: 700, san: -12, tech: -2 }),
+      opt("gambling", 43, "順勢 Pose 到底，賭這段能當 JoJo 連動預告。", { log: "Pose 成功出圈，連漫迷帳號都來求連動！", fans: 9600, singing: 5, drama: 16, tech: 4 }, { log: "Pose 到模型當機，只剩T-Pose在風中凌亂……", fans: -800, san: -26, drama: 24 }),
+      opt("meme", 57, "配上歐拉聲與作畫崩壞音效，開「替身測量儀」。", { log: "替身測量儀迷因炸裂，骨折翻轉變成招牌技！", fans: 7000, talk: 7, drama: 14 }, { log: "被說消費模型師勞動，風向轉冷……", fans: -400, san: -16, drama: 18 }),
+    ],
+  },
+  {
+    id: "event_delivery_mic_fail",
+    title: "【哥布林外送員忘記關麥】吃播進行中，對方把你的補給全爆料了！",
+    description:
+      "世界觀設定的「哥布林外送公會」來電確認訂單，你以為已靜音。結果對方在你的吃播裡用本名喊樓層、醬料與「那個 V 還在直播喔」。綠界已經開始整理爆料時間軸。",
+    options: [
+      opt("steady", 78, "立刻靜音致歉，私訊請對方刪通話紀錄後再繼續吃。", { log: "切割迅速，食堂危機沒燒成真名事件。", fans: 800, san: 8, drama: -4 }, { log: "致歉空窗太長，觀眾覺得你在銷毀證據……", san: -10, drama: 12 }),
+      opt("standard", 72, "把哥布林請上雜談，當「異世界食堂 NPC」訪談。", { log: "食堂 NPC 訪談爆紅，外送公會成為世界觀常駐！", fans: 4300, talk: 9, san: 6 }, { log: "對方又講出更多地址細節，訪談變成危機……", fans: 500, san: -14, drama: 20 }),
+      opt("gambling", 38, "公開對質外送平台，要求保護創作者隱私。", { log: "對質促成平台聲明，你被封為夜食權益騎士！", fans: 8600, talk: 6, drama: 16 }, { log: "被剪成欺負外送員，二次炎上……", fans: -1800, san: -30, drama: 38 }),
+      opt("meme", 54, "頒發「哥布林傳令官」稱號，請 Super Chat 投票今晚加什麼醬。", { log: "傳令官設定笑翻全場，吃播變成每月凸待！", fans: 6100, talk: 8, drama: 12 }, { log: "投票還沒完，本名切片已經流出……", fans: -300, san: -18, drama: 24 }),
+    ],
+  },
+  {
+    id: "event_asmr_mic_disaster",
+    title: "【ASMR 人頭骨折】魔王城深夜特典，{randomGlitch}把耳膜打穿！",
+    description:
+      "在魔王城深夜開 ASMR 特典，3D 人頭麥被哥布林僕人絆倒，先是{randomGlitch}，接著炸出 120 分貝耳膜毀滅級巨響。同看瞬間變成急救室，綠界刷「還活著嗎」。",
+    options: [
+      opt("steady", 78, "緊急謝罪，為聽眾發放「耳膜復原藥水」致歉圖。", { log: "藥水致歉被誇懂分寸，夜場危機沒燒成炎上。", fans: 1100, drama: -10, san: 8 }, { log: "藥水圖被當敷衍，耳膜受害者還在刷……", san: -10, drama: 10 }),
+      opt("standard", 73, "順勢轉型，開一場「暴走金屬音系 ASMR」。", { log: "金屬音 ASMR 意外圈到新聽眾！", fans: 4100, talk: 5, drama: 8 }, { log: "轉型太硬，ASMR 粉大量逃兵……", fans: 500, san: -12, drama: 12 }),
+      opt("gambling", 40, "舉辦「耳膜耐受度極限挑戰賽」大爆播。", { log: "挑戰賽切片瘋傳，魔王城夜場封神！", fans: 10200, drama: 22, talk: 4 }, { log: "有人真的不適下線，平台來信提醒音量……", fans: -900, san: -28, drama: 32 }),
+      opt("meme", 55, "大喊：「這是魔王城最新的精神攻擊技術！」", { log: "精神攻擊迷因出圈，連敵對公會都來學！", fans: 6800, talk: 8, drama: 14 }, { log: "被說消費觀眾聽力，風向轉冷……", fans: -400, san: -16, drama: 18 }),
+    ],
+  },
+  {
+    id: "event_threads_algorithm_blessing",
+    title: "【Threads 廢文神蹟】一句公會打工文，引來萬人通靈！",
+    description:
+      "你隨手在 Threads 寫：『如果白天在公會跟 {randomStreamer} 上班，晚上在魔王城開台會怎樣？』演算法突然推爆，幾萬人開始通靈中之人與工會。告示板已經不是你的了。",
+    chain: {
+      onType: "gambling",
+      followUpId: "event_threads_telepathy_callback",
+      delayMonths: 5,
+    },
+    options: [
+      opt("steady", 79, "刪文並發限動：「只是帳號被哥布林盜用啦。」", { log: "盜用說讓熱度緩降，真名沒被坐實。", fans: 1200, drama: -8, san: 6 }, { log: "刪文被當心虛，截圖已經遍地開花……", san: -10, drama: 14 }),
+      opt("standard", 74, "認真回覆留言，建立「公會勤奮打工妹」人設。", { log: "打工妹人設站穩，雜談粉大量流入！", fans: 4300, talk: 8 }, { log: "回覆越描越黑，工會同事開始不安……", fans: 700, san: -10, drama: 12 }),
+      opt("gambling", 39, "直接在串下貼晚上魔王城的直播連結。", { log: "廢文導流奇蹟，同看直接爆倉！", fans: 10800, drama: 24, talk: 5 }, { log: "被說公然通靈自己，解析文連夜產出……", fans: -1500, san: -26, drama: 34 }),
+      opt("meme", 57, "回覆：「對，我就是魔王，速來公會投履歷。」", { log: "魔王徵才迷因爆紅，履歷梗圖洗版！", fans: 7200, talk: 7, drama: 14 }, { log: "被當真成招搖撞騙，嚴肅粉退訂……", fans: -600, san: -14, drama: 20 }),
+    ],
+  },
+  {
+    id: "event_gacha_addiction_stream",
+    title: "【天井卡池耐久】勇者大人夏季泳裝 SSR，不抽到絕不關台！",
+    description:
+      "為了抽中異世界轉蛋的「勇者大人夏季泳裝 SSR」，你在配信發誓不抽到不下播。寶石見底、綠界開始勸停，你還在說最後十連。第 300 抽的天井燈光已經在閃。",
+    options: [
+      opt("steady", 80, "冷靜閉麥，默默用課金保底把這池收掉。", { log: "停損被誇成熟，沒變成勸世課金台。", fans: 900, drama: -6, san: 6 }, { log: "閉麥太久，觀眾以為你氣到消失……", san: -8 }),
+      opt("standard", 73, "邊哭邊唱「魔法少女祈禱歌」求卡。", { log: "祈禱歌意外動人，非酋粉產生共鳴！", fans: 4000, singing: 6, talk: 4, drama: 6 }, { log: "哭太久被剪成玻璃心精華……", fans: 600, san: -12, drama: 10 }),
+      opt("gambling", 36, "賣掉魔王城兩把寶劍，再加碼 300 抽！", { log: "加碼神蹟出貨，切片標題全是尖叫！", fans: 11200, drama: 20 }, { log: "還是沒貨，直播間變成勸世文……", fans: -1000, san: -32, drama: 28 }),
+      opt("meme", 52, "召喚哥布林僕人代抽，失敗就把它獻祭給卡池。", { log: "獻祭代抽成為每月儀式，非酋公會集結！", fans: 6400, talk: 7, drama: 14 }, { log: "被說美化賭博，平台來信提醒……", fans: -400, san: -16, drama: 20 }),
+    ],
+  },
+  {
+    id: "event_live2d_rigging_leak",
+    title: "【建模師媽媽的實驗物理】眼肌抽搐與胸口次元膨脹當場暴走！",
+    description:
+      "Live2D 建模師媽媽送來升級檔，宣稱加入「最新{randomGlitch}」物理。連動配信正熱，參數突然暴走，同箱成員的表情管理比你的皮更崩潰。",
+    options: [
+      opt("steady", 78, "切回舊版皮套，並感謝媽媽的用心製作。", { log: "切舊版止血成功，媽媽也覺得被尊重。", fans: 1000, drama: -8, san: 8, tech: 3 }, { log: "切檔太慢，暴走片段已經外流……", san: -10, drama: 10 }),
+      opt("standard", 74, "展示誇張物理，與同箱成員現場一起爆笑。", { log: "連動爆笑回成為熱門精華，物理反而加分！", fans: 4400, talk: 7, drama: 6 }, { log: "笑場過頭，被說不專業……", fans: 700, san: -10, drama: 10 }),
+      opt("gambling", 41, "舉辦「物理極限展覽會」，衝上趨勢。", { log: "展覽會登上趨勢，媽媽成為傳奇皮師！", fans: 9800, drama: 18, tech: 6 }, { log: "尺度被檢舉，展覽會提前下架……", fans: -1300, san: -26, drama: 30 }),
+      opt("meme", 56, "主張這是「異世界人體力學」的正常現象。", { log: "人體力學設定補完，世界觀又厚了一層！", fans: 6600, talk: 8, drama: 12 }, { log: "被說消費皮師勞動，留言區開打……", fans: -300, san: -14, drama: 16 }),
+    ],
+  },
+  {
+    id: "event_hero_superchat_bomb",
+    title: "【討伐隊勇者的彩虹 Super Chat】十連最高額，還約你明天公會見！",
+    description:
+      "王國最強勇者走進魔王城直播間，連續砸下十個最高額彩虹 Super Chat，留言：「看板娘明天公會見。」綠界瞬間分成應援席與通靈席，同看數字開始不正常。",
+    chain: {
+      onType: "gambling",
+      followUpId: "event_hero_guild_meet_callback",
+      delayMonths: 5,
+    },
+    options: [
+      opt("steady", 77, "假裝沒看到那句，只感謝金幣與應援。", { log: "裝忙過關，通靈沒被坐實，金幣也收下了。", fans: 1400, drama: -6, san: 8 }, { log: "被說冷淡，勇者粉開始不開心……", fans: 400, san: -8, drama: 10 }),
+      opt("standard", 72, "用魔王聲線嗆：「勇者的金幣，本魔王就收下了！」", { log: "魔王嗆聲成為名場面，敵對公會粉湧入！", fans: 4800, talk: 8, drama: 10 }, { log: "嗆太兇，被剪成欺負金主……", fans: 800, san: -12, drama: 16 }),
+      opt("gambling", 38, "當場開「勇者大名專屬 1V1 語音賞」。", { log: "1V1 語音賞爆紅，討伐隊與魔王城同時訂閱！", fans: 11500, drama: 28, talk: 6 }, { log: "語音中又漏一句真名，通靈升級……", fans: -1700, san: -30, drama: 40 }),
+      opt("meme", 54, "現場用夾子音叫他「爸爸」，讓勇者精神混亂。", { log: "夾子音爸爸梗炸裂，連勇者都來當迷因素材！", fans: 7800, talk: 9, drama: 18 }, { log: "尺度被檢討，爸爸梗變成解析文……", fans: -500, san: -18, drama: 24 }),
+    ],
+  },
+  {
+    id: "event_collab_offline_meet",
+    title: "【異世界オフ會】酒館聚餐，發現大家都是公會同事！",
+    description:
+      "你與同箱歌姬、雜談 V 約在王國酒館吃{randomFood}。結果一摘耳機，現場氣氛陷入極度尷尬的通靈狀態：大家白天竟然都在同一間公會打卡。",
+    options: [
+      opt("steady", 79, "大家默契戴上口罩，假裝互相不認識。", { log: "默契裝不認識，公會隔天氣氛微妙但安全。", fans: 1000, drama: -12, san: 10 }, { log: "有人還是拍到合照邊角，群組開始猜測……", san: -8, drama: 10 }),
+      opt("standard", 73, "邊吃邊開心聊工作黑幕，當私人雜談。", { log: "酒館夜話很真實，回來開台更有人味！", fans: 4200, talk: 8, san: 4 }, { log: "黑幕聊太細，隔天公會風向有點怪……", fans: 600, san: -10, drama: 12 }),
+      opt("gambling", 40, "現場拍「公會同事聚餐合照」發到社群。", { log: "合照引爆熱議，異世界同僚設定直接坐實成迷因！", fans: 10000, drama: 26, talk: 5 }, { log: "被說公開處刑同事，公會內部開會……", fans: -1600, san: -28, drama: 36 }),
+      opt("meme", 56, "一起高舉酒杯大喊：「今晚我們都是魔王幹部！」", { log: "魔王幹部乾杯成為オフ會傳說，連動檔期秒滿！", fans: 7000, talk: 8, drama: 14 }, { log: "酒後失言被錄到，隔天要發澄清……", fans: -200, san: -14, drama: 18 }),
+    ],
+  },
+  {
+    id: "event_isekai_god_descent",
+    title: "【異世界神明降臨】系統提示：你的配信已被「創世神」訂閱！",
+    description:
+      "待機室突然出現無法封鎖的金框帳號「創世神」。對方丟下一則 Super Chat：「繼續開台，否則這個世界的存檔會被刪除。」同看爆炸，有人當真、有人當 ARG，烤肉 Man 已經在做字幕。",
+    rarity: "ssr",
+    options: [
+      opt("steady", 76, "當成惡作劇，感謝金幣後把話題拉回正片。", { log: "冷靜處理讓 ARG 更像真的，神秘感不減反增。", fans: 2200, san: 10, drama: -6 }, { log: "被說沒品味，神明粉開始出征……", fans: 400, san: -12, drama: 14 }),
+      opt("standard", 70, "開「神諭問答」，讓聊天室投票世界規則。", { log: "神諭問答成為年度神回，世界觀直接升華！", fans: 7200, talk: 10, drama: 8 }, { log: "規則越投越崩，世界觀撞車……", fans: 1200, san: -14, drama: 16 }),
+      opt("gambling", 34, "當場對神明立誓：月內破萬，否則刪皮謝罪。", { log: "破萬誓約掀起聖戰應援，訂閱真的在飆！", fans: 16000, drama: 22, talk: 6 }, { log: "誓約被當詐騙，檢舉信湧入……", fans: -2200, san: -34, drama: 42 }),
+      opt("meme", 48, "把創世神設成箱推幹部，請祂排班當綠界主持。", { log: "神明主持迷因爆紅，SSR 傳說誕生！", fans: 12000, talk: 9, drama: 16 }, { log: "被宗教梗冒犯到，部分粉退訂……", fans: -800, san: -18, drama: 22 }),
+    ],
+  },
+  {
+    id: "event_mom_rigger_full_skin",
+    title: "【親媽皮師突發全套新皮】沒預告、沒測試，今晚直接換裝出道！",
+    description:
+      "親媽皮師半夜丟來全套新皮：新衣、新髮、新物理，檔名是「驚喜不要哭」。你連動前十分鐘才裝上，結果比預定稿更美，也更可能整晚{randomGlitch}。",
+    rarity: "ssr",
+    options: [
+      opt("steady", 77, "先切回舊皮開台，新皮留到測完再披露。", { log: "專業被誇，新皮期待值拉滿，預告文爆香。", fans: 2400, san: 8, drama: -8, tech: 4 }, { log: "觀眾已經看到檔名，被說藏隱藏……", fans: 600, san: -8, drama: 8 }),
+      opt("standard", 72, "今晚小披露，邊開邊請媽媽遠端微調。", { log: "邊播邊改的現場感爆棚，技術粉瘋狂截圖！", fans: 7800, tech: 10, talk: 5 }, { log: "遠端斷線，新皮卡在半成品……", fans: 900, san: -14, drama: 12 }),
+      opt("gambling", 35, "直接當第二次出道，全平台同步換皮直播。", { log: "二次出道成功，親媽皮師與你一起上趨勢！", fans: 18000, drama: 18, singing: 6, tech: 6 }, { log: "物理全面骨折，二次出道變成骨科之夜……", fans: -1500, san: -30, drama: 34 }),
+      opt("meme", 50, "讓新舊兩套皮輪流說話，開「分身會議」。", { log: "分身會議 SSR 神回，連繪師媽媽都進聊天室！", fans: 12500, talk: 10, drama: 14 }, { log: "切換太頻繁當機，會議只剩一張當機臉……", fans: 800, san: -16, drama: 16 }),
+    ],
+  },
+  {
+    id: "event_beef_noodle_doujin_callback",
+    title: "【伏筆回收】半年前的{randomFood}文，被繪師畫成同人誌了！",
+    description:
+      "公會繪師把你凌晨三點喊 {randomFood} 的切片畫成全彩本，封面是你抱著麵碗對魔王城吹號角。預購連結已經在 Threads 轉發，同看問你要不要簽。",
+    chainFrom: "event_midnight_beef_noodle_meme",
+    options: [
+      opt("steady", 78, "私訊致謝並請對方加註「非官方」，自己不帶貨。", { log: "界線清楚，同人誌熱賣也沒燒到你。", fans: 1300, san: 8, drama: -6 }, { log: "不帶貨被說高冷，繪師粉有點失落……", san: -8, drama: 8 }),
+      opt("standard", 74, "開「封面鑑賞會」，當世界觀官方外傳介紹。", { log: "外傳鑑賞會讓食堂設定正式編年！", fans: 4600, talk: 8, san: 6 }, { log: "講太細，被當成官方認證通靈……", fans: 800, san: -10, drama: 12 }),
+      opt("gambling", 42, "宣布限量聯名，封面印進自己的週邊。", { log: "聯名週邊秒殺，食堂傳說變成搖錢樹！", fans: 9800, drama: 16, talk: 5 }, { log: "授權沒談清楚，繪師發文開撕……", fans: -1400, san: -26, drama: 32 }),
+      opt("meme", 58, "把號角音效設成開台聲，每次上線先喊加辣。", { log: "加辣開台聲成為招牌，伏筆徹底回收成迷因！", fans: 7000, talk: 7, drama: 12 }, { log: "音效太大，被說耳朵又要碎……", fans: 400, san: -12, drama: 10 }),
+    ],
+  },
+  {
+    id: "event_threads_telepathy_callback",
+    title: "【伏筆回收】半年前那則廢文，被 {randomStreamer} 引用開撕！",
+    description:
+      "你以為 Threads 神蹟過了。{randomStreamer} 突然引用你那句公會打工文，配文：「這不是世界觀，這是通靈。」舊串復活，新粉與舊粉在告示板對線。",
+    chainFrom: "event_threads_algorithm_blessing",
+    options: [
+      opt("steady", 77, "不引用、不開撕，只置頂舊的世界觀說明。", { log: "不參戰讓二次通靈慢慢熄火。", fans: 1100, drama: -8, san: 6 }, { log: "沈默被當默認，引用串更熱鬧……", san: -12, drama: 16 }),
+      opt("standard", 72, "邀請對方上雜談把誤會講清楚。", { log: "對談把廢文講成世界觀訪談，雙邊粉流入！", fans: 4500, talk: 9 }, { log: "對談變成抬槓，通靈升級……", fans: 700, san: -14, drama: 18 }),
+      opt("gambling", 38, "公開對線，賭自己能把世界觀辯到贏。", { log: "辯贏了，廢文成為公會文學範本！", fans: 9400, talk: 8, drama: 20 }, { log: "辯輸被剪成心虛，舊文二次出征……", fans: -1800, san: -28, drama: 38 }),
+      opt("meme", 54, "把引用串做成「通靈進度條」，每天更新百分比。", { log: "通靈進度條笑死全場，危機又變節目！", fans: 6600, talk: 8, drama: 12 }, { log: "被說還在玩梗，嚴肅粉更怒……", fans: -500, san: -16, drama: 22 }),
+    ],
+  },
+  {
+    id: "event_hero_guild_meet_callback",
+    title: "【伏筆回收】勇者真的來公會了，還提那十則彩虹 Super Chat！",
+    description:
+      "「明天公會見」不是玩笑。勇者出現在公會門口，對櫃檯提起魔王城看板娘與彩虹 Super Chat。同事的眼神開始通靈，你的待機室已經有人截圖打卡。",
+    chainFrom: "event_hero_superchat_bomb",
+    options: [
+      opt("steady", 76, "請同事幫忙擋駕，自己當普通員工打卡下班。", { log: "成功裝路人，公會危機沒爆。", fans: 900, drama: -10, san: 10 }, { log: "擋駕失敗，茶水間已經在傳……", san: -12, drama: 16 }),
+      opt("standard", 73, "用世界觀接待：魔王城外交使節來訪。", { log: "外交使節設定救場，同事也開始配合演！", fans: 4800, talk: 8, drama: 8 }, { log: "演太大，被當成公開承認……", fans: 800, san: -14, drama: 20 }),
+      opt("gambling", 37, "乾脆開戶外凸待，讓勇者當神秘來賓。", { log: "戶外凸待爆紅，彩虹 SC 伏筆完美回收！", fans: 12000, drama: 24, talk: 7 }, { log: "現場被認出口罩，真名危機升級……", fans: -2000, san: -32, drama: 44 }),
+      opt("meme", 53, "送他員工證，職稱印「魔王城特約爸爸」。", { log: "特約爸爸員工證成為年度迷因週邊！", fans: 7400, talk: 8, drama: 16 }, { log: "員工證流出，公會人資要約談……", fans: -700, san: -18, drama: 26 }),
+    ],
+  },
 ];
 
 export const RANDOM_EVENTS: GameEvent[] = RAW_EVENTS.map((event) => ({
   ...event,
   options: event.options.map(balanceSteadyOption),
 }));
+
+export function isSsrEvent(event: GameEvent): boolean {
+  return event.rarity === "ssr";
+}
+
+export function isChainOnlyEvent(event: GameEvent): boolean {
+  return Boolean(event.chainFrom);
+}
+
+export function getStandardEventPool(): GameEvent[] {
+  return RANDOM_EVENTS.filter(
+    (event) => !isSsrEvent(event) && !isChainOnlyEvent(event),
+  );
+}
+
+export function getSsrEventPool(): GameEvent[] {
+  return RANDOM_EVENTS.filter(isSsrEvent);
+}
+
+export function getEventTemplateById(id: string): GameEvent | undefined {
+  return RANDOM_EVENTS.find((event) => event.id === id);
+}

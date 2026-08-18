@@ -24,13 +24,17 @@ import {
   type CareerOption,
 } from "@/data/careerChoices";
 import {
-  RANDOM_EVENTS,
+  SSR_APPEAR_RATE,
+  fillEventVariables,
+  getEventTemplateById,
+  getSsrEventPool,
+  getStandardEventPool,
   type EventFailure,
   type EventOption,
   type EventSuccess,
   type GameEvent,
 } from "@/data/events";
-import { checkChance, getRandomInt, shuffleArray } from "@/lib/prng";
+import { checkChance, getRandom, getRandomArrayItem, getRandomInt, shuffleArray } from "@/lib/prng";
 import { getEpilogue, getVTuberTitle, TITLES } from "@/lib/titles";
 import { useGameStore, type PlayerStats } from "@/store/useGameStore";
 
@@ -210,8 +214,15 @@ function generateSeed(): string {
   return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
 }
 
-function cloneEvents(source: GameEvent[] = RANDOM_EVENTS): GameEvent[] {
+function cloneEvents(source: GameEvent[] = getStandardEventPool()): GameEvent[] {
   return JSON.parse(JSON.stringify(source)) as GameEvent[];
+}
+
+function instantiateEvent(template: GameEvent): GameEvent {
+  return fillEventVariables(
+    JSON.parse(JSON.stringify(template)) as GameEvent,
+    getRandomArrayItem,
+  );
 }
 
 function shuffleFreshDeck(usedIds: Set<string>, lastId?: string): GameEvent[] {
@@ -248,7 +259,39 @@ function dealFromDeck(
   if (event) {
     usedIdsRef.current.add(event.id);
   }
-  return event ?? cloneEvents()[0];
+  return instantiateEvent(event ?? cloneEvents()[0]);
+}
+
+function drawNextEvent(
+  deckRef: { current: GameEvent[] },
+  cursorRef: { current: number },
+  usedIdsRef: { current: Set<string> },
+  chainQueueRef: { current: { month: number; eventId: string }[] },
+): GameEvent {
+  const month = useGameStore.getState().month;
+  const dueIndex = chainQueueRef.current.findIndex((item) => item.month <= month);
+  if (dueIndex >= 0) {
+    const due = chainQueueRef.current[dueIndex];
+    chainQueueRef.current.splice(dueIndex, 1);
+    const template = getEventTemplateById(due.eventId);
+    if (template && !usedIdsRef.current.has(template.id)) {
+      usedIdsRef.current.add(template.id);
+      return instantiateEvent(template);
+    }
+  }
+
+  if (getRandom() < SSR_APPEAR_RATE) {
+    const unusedSsr = getSsrEventPool().filter(
+      (event) => !usedIdsRef.current.has(event.id),
+    );
+    if (unusedSsr.length > 0) {
+      const picked = getRandomArrayItem(unusedSsr);
+      usedIdsRef.current.add(picked.id);
+      return instantiateEvent(picked);
+    }
+  }
+
+  return dealFromDeck(deckRef, cursorRef, usedIdsRef);
 }
 
 function splitBracketText(text: string): { badge: string; body: string } {
@@ -627,6 +670,7 @@ export default function Home() {
   const eventDeckRef = useRef<GameEvent[]>([]);
   const eventCursorRef = useRef(0);
   const usedEventIdsRef = useRef<Set<string>>(new Set());
+  const chainQueueRef = useRef<{ month: number; eventId: string }[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -662,6 +706,7 @@ export default function Home() {
     const nextSeed = seedInput.trim() || DEFAULT_SEED;
     initGame(nextName, nextSeed);
     usedEventIdsRef.current = new Set();
+    chainQueueRef.current = [];
     eventDeckRef.current = shuffleArray(cloneEvents());
     eventCursorRef.current = 0;
     setPeakFans(100);
@@ -676,7 +721,14 @@ export default function Home() {
     setCrisisOverlay(false);
     setSteadyStreak(0);
     setTrafficStagnation(false);
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
+    setCurrentEvent(
+      drawNextEvent(
+        eventDeckRef,
+        eventCursorRef,
+        usedEventIdsRef,
+        chainQueueRef,
+      ),
+    );
     setResolveState(null);
 
     if (talent) {
@@ -809,6 +861,23 @@ export default function Home() {
       }
     }
 
+    if (
+      currentEvent?.chain &&
+      option.type === currentEvent.chain.onType
+    ) {
+      let dueMonth = stats.month + currentEvent.chain.delayMonths;
+      while (CAREER_CHOICES[dueMonth] && dueMonth <= 36) {
+        dueMonth += 1;
+      }
+      if (dueMonth > stats.month && dueMonth <= 36) {
+        chainQueueRef.current.push({
+          month: dueMonth,
+          eventId: currentEvent.chain.followUpId,
+        });
+        logText += "（伏筆已種下，數月後可能回收……）";
+      }
+    }
+
     applyEventResult(toAbsoluteChanges(stats, deltas), logText);
 
     if (isCollabEvent(currentEvent)) {
@@ -905,13 +974,23 @@ export default function Home() {
     const arrived = useGameStore.getState().month;
     const phase = CAREER_CHOICES[arrived];
     if (phase) {
+      chainQueueRef.current = chainQueueRef.current.map((item) =>
+        item.month === arrived ? { ...item, month: arrived + 1 } : item,
+      );
       setCurrentEvent(null);
       setCareerPhase(phase);
       return;
     }
 
     setCareerPhase(null);
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
+    setCurrentEvent(
+      drawNextEvent(
+        eventDeckRef,
+        eventCursorRef,
+        usedEventIdsRef,
+        chainQueueRef,
+      ),
+    );
   }
 
   function handleCareerSelect(option: CareerOption) {
@@ -971,7 +1050,14 @@ export default function Home() {
       return;
     }
 
-    setCurrentEvent(dealFromDeck(eventDeckRef, eventCursorRef, usedEventIdsRef));
+    setCurrentEvent(
+      drawNextEvent(
+        eventDeckRef,
+        eventCursorRef,
+        usedEventIdsRef,
+        chainQueueRef,
+      ),
+    );
   }
 
   function handleReincarnate() {
@@ -994,6 +1080,7 @@ export default function Home() {
     eventDeckRef.current = [];
     eventCursorRef.current = 0;
     usedEventIdsRef.current = new Set();
+    chainQueueRef.current = [];
     setNameInput(name || DEFAULT_NAME);
     setSeedInput(seed || DEFAULT_SEED);
   }
@@ -1566,9 +1653,21 @@ function LiveScreen({
                 const heading = splitBracketText(currentEvent.title);
                 return (
                   <>
-                    <span className="mb-3 inline-flex w-fit rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1 text-[11px] font-black tracking-widest text-white">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="inline-flex w-fit rounded-full bg-gradient-to-r from-pink-500 to-purple-500 px-3 py-1 text-[11px] font-black tracking-widest text-white">
                       {heading.badge}
                     </span>
+                    {currentEvent.rarity === "ssr" ? (
+                      <span className="inline-flex w-fit rounded-full border border-amber-300/70 bg-gradient-to-r from-amber-400/30 to-fuchsia-500/30 px-3 py-1 text-[11px] font-black tracking-widest text-amber-100 shadow-[0_0_16px_rgba(251,191,36,0.35)]">
+                        ✨ SSR 彩蛋
+                      </span>
+                    ) : null}
+                    {currentEvent.chainFrom ? (
+                      <span className="inline-flex w-fit rounded-full border border-purple-300/40 bg-purple-500/20 px-3 py-1 text-[11px] font-black tracking-widest text-purple-100">
+                        伏筆回收
+                      </span>
+                    ) : null}
+                    </div>
                     <h2 className="mb-3 text-xl font-bold leading-snug text-purple-100 md:text-2xl">
                       {heading.body || currentEvent.title}
                     </h2>
